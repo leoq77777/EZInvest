@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EZInvest - 智能投资助手</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 EZInvest 智能投资助手</h1>
+            <p class="subtitle">基于AI的金融投资分析平台</p>
+        </header>
+
+        <main>
+            <div class="chat-container">
+                <div id="chat-messages" class="chat-messages">
+                    <div class="message bot-message">
+                        <div class="message-content">
+                            <p>👋 欢迎使用EZInvest智能投资助手！</p>
+                            <p>我可以帮您分析股票、提供投资建议。请告诉我您想了解哪只股票？</p>
+                            <p class="example-queries">
+                                <strong>示例问题：</strong><br>
+                                • 最近的apple股票还能买吗<br>
+                                • 分析一下000001的走势<br>
+                                • 腾讯股票现在值得投资吗
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="user-input" 
+                            class="chat-input" 
+                            placeholder="输入您的问题，例如：最近的apple股票还能买吗"
+                            autocomplete="off"
+                        >
+                        <button id="send-button" class="send-button">
+                            <span>发送</span>
+                        </button>
+                    </div>
+                    <div class="input-hint">
+                        <span>💡 提示：可以询问股票代码、股票名称或投资相关问题</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>EZInvest v0.1.0 | 投资有风险，决策需谨慎</p>
+        </footer>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
+
