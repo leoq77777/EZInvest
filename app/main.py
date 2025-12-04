@@ -5,8 +5,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.config import settings
-from app.api.routes import router
 import logging
+
+# 延迟导入router，避免在导入时就触发所有依赖
+def get_router():
+    """延迟加载router"""
+    from app.api.routes import router
+    return router
 
 # 配置日志
 logging.basicConfig(
@@ -29,8 +34,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 注册路由
-app.include_router(router)
+# 注册路由（延迟加载）
+try:
+    router = get_router()
+    app.include_router(router)
+except Exception as e:
+    logger.warning(f"Failed to load API routes: {e}")
 
 # 静态文件（前端）
 try:

@@ -65,20 +65,28 @@ class AkshareDataFetcher:
             # 获取股票实时行情
             df = self._retry_request(ak.stock_zh_a_spot_em)
             
-            # 查找目标股票
-            stock = df[df['代码'] == symbol]
+            if df.empty:
+                return None
+            
+            # 查找目标股票（尝试不同的代码列名）
+            code_col = '代码' if '代码' in df.columns else 'code'
+            if code_col not in df.columns:
+                # 尝试第一列作为代码
+                code_col = df.columns[0]
+            
+            stock = df[df[code_col].astype(str) == str(symbol)]
             if stock.empty:
                 return None
             
             stock_data = stock.iloc[0].to_dict()
             return {
                 "symbol": symbol,
-                "name": stock_data.get('名称', ''),
-                "current_price": float(stock_data.get('最新价', 0)),
-                "change_percent": float(stock_data.get('涨跌幅', 0)),
-                "volume": float(stock_data.get('成交量', 0)),
-                "turnover": float(stock_data.get('成交额', 0)),
-                "market_cap": float(stock_data.get('总市值', 0)),
+                "name": stock_data.get('名称', stock_data.get('name', '')),
+                "current_price": float(stock_data.get('最新价', stock_data.get('current_price', 0)) or 0),
+                "change_percent": float(stock_data.get('涨跌幅', stock_data.get('change_percent', 0)) or 0),
+                "volume": float(stock_data.get('成交量', stock_data.get('volume', 0)) or 0),
+                "turnover": float(stock_data.get('成交额', stock_data.get('turnover', 0)) or 0),
+                "market_cap": float(stock_data.get('总市值', stock_data.get('market_cap', 0)) or 0),
             }
         except Exception as e:
             logger.error(f"Failed to get stock info for {symbol}: {e}")
@@ -104,8 +112,10 @@ class AkshareDataFetcher:
             if df.empty:
                 return None
             
-            # 转换日期格式
-            df['日期'] = pd.to_datetime(df['日期'])
+            # 转换日期格式（处理不同的列名）
+            date_col = '日期' if '日期' in df.columns else 'date'
+            if date_col in df.columns:
+                df[date_col] = pd.to_datetime(df[date_col])
             return df
         except Exception as e:
             logger.error(f"Failed to get stock daily data for {symbol}: {e}")
@@ -115,23 +125,31 @@ class AkshareDataFetcher:
         """获取股票实时行情"""
         try:
             df = self._retry_request(ak.stock_zh_a_spot_em)
-            stock = df[df['代码'] == symbol]
             
+            if df.empty:
+                return None
+            
+            # 查找目标股票（尝试不同的代码列名）
+            code_col = '代码' if '代码' in df.columns else 'code'
+            if code_col not in df.columns:
+                code_col = df.columns[0]
+            
+            stock = df[df[code_col].astype(str) == str(symbol)]
             if stock.empty:
                 return None
             
             stock_data = stock.iloc[0].to_dict()
             return {
                 "symbol": symbol,
-                "current_price": float(stock_data.get('最新价', 0)),
-                "change": float(stock_data.get('涨跌额', 0)),
-                "change_percent": float(stock_data.get('涨跌幅', 0)),
-                "volume": float(stock_data.get('成交量', 0)),
-                "turnover": float(stock_data.get('成交额', 0)),
-                "high": float(stock_data.get('最高', 0)),
-                "low": float(stock_data.get('最低', 0)),
-                "open": float(stock_data.get('今开', 0)),
-                "yesterday_close": float(stock_data.get('昨收', 0)),
+                "current_price": float(stock_data.get('最新价', stock_data.get('current_price', 0)) or 0),
+                "change": float(stock_data.get('涨跌额', stock_data.get('change', 0)) or 0),
+                "change_percent": float(stock_data.get('涨跌幅', stock_data.get('change_percent', 0)) or 0),
+                "volume": float(stock_data.get('成交量', stock_data.get('volume', 0)) or 0),
+                "turnover": float(stock_data.get('成交额', stock_data.get('turnover', 0)) or 0),
+                "high": float(stock_data.get('最高', stock_data.get('high', 0)) or 0),
+                "low": float(stock_data.get('最低', stock_data.get('low', 0)) or 0),
+                "open": float(stock_data.get('今开', stock_data.get('open', 0)) or 0),
+                "yesterday_close": float(stock_data.get('昨收', stock_data.get('yesterday_close', 0)) or 0),
                 "timestamp": datetime.now().isoformat()
             }
         except Exception as e:
@@ -149,16 +167,19 @@ class AkshareDataFetcher:
             
             # 保存每日数据
             for _, row in df.iterrows():
-                date = row['日期']
+                # 处理日期列（可能是'日期'或'date'）
+                date_col = '日期' if '日期' in df.columns else 'date'
+                date = pd.to_datetime(row[date_col]) if isinstance(row[date_col], str) else row[date_col]
+                
                 data = {
-                    "open": float(row.get('开盘', 0)),
-                    "close": float(row.get('收盘', 0)),
-                    "high": float(row.get('最高', 0)),
-                    "low": float(row.get('最低', 0)),
-                    "volume": float(row.get('成交量', 0)),
-                    "turnover": float(row.get('成交额', 0)),
-                    "amplitude": float(row.get('振幅', 0)),
-                    "change_percent": float(row.get('涨跌幅', 0)),
+                    "open": float(row.get('开盘', row.get('open', 0)) or 0),
+                    "close": float(row.get('收盘', row.get('close', 0)) or 0),
+                    "high": float(row.get('最高', row.get('high', 0)) or 0),
+                    "low": float(row.get('最低', row.get('low', 0)) or 0),
+                    "volume": float(row.get('成交量', row.get('volume', 0)) or 0),
+                    "turnover": float(row.get('成交额', row.get('turnover', 0)) or 0),
+                    "amplitude": float(row.get('振幅', row.get('amplitude', 0)) or 0),
+                    "change_percent": float(row.get('涨跌幅', row.get('change_percent', 0)) or 0),
                 }
                 
                 storage_manager.save_financial_data(
@@ -179,10 +200,23 @@ class AkshareDataFetcher:
         """获取股票列表"""
         try:
             df = self._retry_request(ak.stock_zh_a_spot_em)
+            
+            if df.empty:
+                return []
+            
+            # 处理不同的列名
+            code_col = '代码' if '代码' in df.columns else 'code'
+            name_col = '名称' if '名称' in df.columns else 'name'
+            
+            if code_col not in df.columns:
+                code_col = df.columns[0]
+            if name_col not in df.columns:
+                name_col = df.columns[1] if len(df.columns) > 1 else code_col
+            
             return [
                 {
-                    "symbol": row['代码'],
-                    "name": row['名称']
+                    "symbol": str(row[code_col]),
+                    "name": str(row.get(name_col, ''))
                 }
                 for _, row in df.iterrows()
             ]

@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 import logging
 from datetime import datetime
 import re
-from app.tools.rag import rag_tool
+from app.tools.rag import get_rag_tool
 from app.database.storage import storage_manager
 import time
 
@@ -234,7 +234,7 @@ class PolicyTool:
                 saved_ids.append(news_id)
                 
                 # 添加到向量数据库
-                rag_tool.add_documents([{
+                get_rag_tool().add_documents([{
                     'text': f"{article['title']}\n{article['content']}",
                     'metadata': {
                         'symbol': symbol,
@@ -263,7 +263,7 @@ class PolicyTool:
         Returns:
             相关新闻列表
         """
-        results = rag_tool.search_by_symbol(symbol, query, top_k=top_k)
+        results = get_rag_tool().search_by_symbol(symbol, query, top_k=top_k)
         
         # 格式化结果
         news_list = []
