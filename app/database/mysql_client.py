@@ -8,22 +8,39 @@ from sqlalchemy.pool import QueuePool
 from typing import Optional
 from app.config import settings
 from datetime import datetime
+from sqlalchemy.pool import StaticPool
 
 # 创建数据库引擎
-DATABASE_URL = (
-    f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}"
-    f"@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}"
-    "?charset=utf8mb4"
-)
+if settings.SQLITE_URL:
+    # 支持 SQLite（文件或内存）。内存模式建议使用 StaticPool 来保持连接一致性。
+    if settings.SQLITE_URL == "sqlite:///:memory:":
+        engine = create_engine(
+            settings.SQLITE_URL,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+            echo=False,
+        )
+    else:
+        engine = create_engine(
+            settings.SQLITE_URL,
+            connect_args={"check_same_thread": False},
+            echo=False,
+        )
+else:
+    DATABASE_URL = (
+        f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}"
+        f"@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}"
+        "?charset=utf8mb4"
+    )
 
-engine = create_engine(
-    DATABASE_URL,
-    poolclass=QueuePool,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    echo=False
-)
+    engine = create_engine(
+        DATABASE_URL,
+        poolclass=QueuePool,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        echo=False
+    )
 
 # 创建Session工厂
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -78,4 +95,13 @@ def init_db():
 def close_db():
     """关闭数据库连接"""
     engine.dispose()
+
+
+# 如果配置为使用 SQLite，则在导入时自动创建表，方便本地开发/测试
+if settings.SQLITE_URL:
+    try:
+        init_db()
+    except Exception:
+        # 避免在导入时抛出异常
+        pass
 

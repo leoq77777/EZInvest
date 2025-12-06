@@ -31,11 +31,15 @@ class Settings(BaseSettings):
     
     # Ollama配置
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "gpt-oss-20b"
+    OLLAMA_MODEL: str = "gpt-oss:20b"
     
     # FAISS配置
     FAISS_INDEX_PATH: str = "./data/faiss_index"
     EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    # 可选的 SQLite URL（用于本地开发/测试），例如：sqlite:///./dev.db 或 sqlite:///:memory:
+    SQLITE_URL: str = ""
+    # 是否使用轻量级 fallback 嵌入（当环境中缺少或无法安全加载 heavy ML 库时启用）
+    EMBEDDING_FALLBACK: bool = True
     
     # 数据预取配置
     DATA_PREFETCH_ENABLED: bool = True

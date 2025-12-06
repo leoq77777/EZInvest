@@ -33,6 +33,7 @@ class RedisClient:
             )
             # 延迟连接检查，避免在导入时失败
             self._connection_checked = False
+            self._available = True
     
     def _ensure_connection(self):
         """确保连接可用（延迟检查）"""
@@ -40,9 +41,12 @@ class RedisClient:
             try:
                 self._client.ping()
                 self._connection_checked = True
+                self._available = True
             except redis.ConnectionError as e:
                 logger.warning(f"Redis connection failed: {e}")
-                self._connection_checked = True  # 标记为已检查，避免重复尝试
+                # 标记为已检查，避免重复尝试；并将可用性设为 False
+                self._connection_checked = True
+                self._available = False
     
     @property
     def client(self) -> redis.Redis:
@@ -52,25 +56,60 @@ class RedisClient:
     
     def get(self, key: str) -> Optional[str]:
         """获取值"""
-        return self._client.get(key)
+        try:
+            self._ensure_connection()
+            if not getattr(self, '_available', True):
+                return None
+            return self._client.get(key)
+        except Exception as e:
+            logger.debug(f"Redis get error for key {key}: {e}")
+            return None
     
     def set(self, key: str, value: Any, ex: Optional[int] = None) -> bool:
         """设置值"""
         if isinstance(value, (dict, list)):
             value = json.dumps(value, ensure_ascii=False)
-        return self._client.set(key, value, ex=ex)
+        try:
+            self._ensure_connection()
+            if not getattr(self, '_available', True):
+                return False
+            return self._client.set(key, value, ex=ex)
+        except Exception as e:
+            logger.debug(f"Redis set error for key {key}: {e}")
+            return False
     
     def delete(self, key: str) -> int:
         """删除键"""
-        return self._client.delete(key)
+        try:
+            self._ensure_connection()
+            if not getattr(self, '_available', True):
+                return 0
+            return self._client.delete(key)
+        except Exception as e:
+            logger.debug(f"Redis delete error for key {key}: {e}")
+            return 0
     
     def exists(self, key: str) -> bool:
         """检查键是否存在"""
-        return bool(self._client.exists(key))
+        try:
+            self._ensure_connection()
+            if not getattr(self, '_available', True):
+                return False
+            return bool(self._client.exists(key))
+        except Exception as e:
+            logger.debug(f"Redis exists error for key {key}: {e}")
+            return False
     
     def expire(self, key: str, time: int) -> bool:
         """设置过期时间"""
-        return self._client.expire(key, time)
+        try:
+            self._ensure_connection()
+            if not getattr(self, '_available', True):
+                return False
+            return self._client.expire(key, time)
+        except Exception as e:
+            logger.debug(f"Redis expire error for key {key}: {e}")
+            return False
     
     def get_json(self, key: str) -> Optional[Any]:
         """获取JSON值"""

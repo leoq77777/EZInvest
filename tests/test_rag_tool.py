@@ -2,7 +2,53 @@
 RAG工具测试
 """
 import pytest
+import os
+import shutil
 from app.tools.rag import rag_tool
+from app.config import settings
+
+
+@pytest.fixture(autouse=True)
+def reset_rag_tool():
+    """在每个测试前重置 RAG 工具，确保测试隔离"""
+    # 清除索引和元数据
+    rag_tool._index = None
+    rag_tool.metadata = []
+    rag_tool._index_initialized = False
+    rag_tool.embedding_dim = None
+    rag_tool._model_loaded = False
+    
+    # 删除磁盘上的索引文件，避免跨测试污染
+    index_dir = os.path.dirname(settings.FAISS_INDEX_PATH)
+    if index_dir and os.path.exists(index_dir):
+        for file in os.listdir(index_dir):
+            if file.startswith(os.path.basename(settings.FAISS_INDEX_PATH)):
+                try:
+                    filepath = os.path.join(index_dir, file)
+                    if os.path.isfile(filepath):
+                        os.remove(filepath)
+                except:
+                    pass
+    
+    yield
+    
+    # 测试后也清理
+    rag_tool._index = None
+    rag_tool.metadata = []
+    rag_tool._index_initialized = False
+    rag_tool.embedding_dim = None
+    rag_tool._model_loaded = False
+    
+    # 清除索引文件
+    if index_dir and os.path.exists(index_dir):
+        for file in os.listdir(index_dir):
+            if file.startswith(os.path.basename(settings.FAISS_INDEX_PATH)):
+                try:
+                    filepath = os.path.join(index_dir, file)
+                    if os.path.isfile(filepath):
+                        os.remove(filepath)
+                except:
+                    pass
 
 
 class TestRAGTool:

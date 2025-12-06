@@ -175,6 +175,7 @@ class StorageManager:
             return [
                 {
                     "id": r.id,
+                    "symbol": r.symbol,
                     "title": r.title,
                     "content": r.content,
                     "source": r.source,

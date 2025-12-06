@@ -24,11 +24,11 @@ def main():
     
     # 测试Redis连接
     try:
-        redis_client.client.ping()
-        print("✓ Redis connection successful")
-    except Exception as e:
-        print(f"✗ Failed to connect to Redis: {e}")
-        return
+        try:
+            redis_client.client.ping()
+            print("✓ Redis connection successful")
+        except Exception as e:
+            print(f"⚠️  Redis not available: {e}. Continuing without Redis.")
     
     print("\nDatabase initialization completed!")
 
