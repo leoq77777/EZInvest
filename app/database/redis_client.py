@@ -1,118 +1,161 @@
 """
-Redis客户端封装
+Redis 客户端封装，支持在配置或连接失败时回退到 fakeredis（内存实现），
+方便在开发/测试环境中使用而无需真实 Redis 服务。
 """
-import redis
 from typing import Optional, Any
 import json
 import logging
+
+import redis
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class RedisClient:
-    """Redis客户端单例"""
-    
+    """Redis 客户端单例，支持自动回退到 fakeredis。"""
+
     _instance: Optional['RedisClient'] = None
-    _client: Optional[redis.Redis] = None
-    
+    _client: Optional[Any] = None
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-    
+
     def __init__(self):
-        if self._client is None:
+        if getattr(self, '_client', None) is not None:
+            return
+
+        self._connection_checked = False
+        self._available = False
+        self._using_fake = False
+
+        # 优先根据配置决定是否使用 fakeredis
+        if settings.USE_FAKE_REDIS:
+            self._try_use_fakeredis(reason="configured")
+            return
+
+        # 否则尝试连接真实 Redis（延迟检测将在 ping 时执行）
+        try:
             self._client = redis.Redis(
                 host=settings.REDIS_HOST,
                 port=settings.REDIS_PORT,
                 db=settings.REDIS_DB,
                 password=settings.REDIS_PASSWORD,
                 decode_responses=True,
-                socket_connect_timeout=5
+                socket_connect_timeout=5,
             )
-            # 延迟连接检查，避免在导入时失败
-            self._connection_checked = False
+            # 不立即 ping，延迟到实际使用时检测
             self._available = True
-    
+        except Exception as e:
+            logger.warning(f"Failed to instantiate redis client: {e}")
+            # 尝试回退到 fakeredis
+            self._try_use_fakeredis(reason="instantiate-failed")
+
+    def _try_use_fakeredis(self, reason: str = "") -> None:
+        """尝试使用 fakeredis 作为回退实现（按需导入）。"""
+        try:
+            import fakeredis
+
+            self._client = fakeredis.FakeStrictRedis(decode_responses=True)
+            self._available = True
+            self._using_fake = True
+            self._connection_checked = True
+            logger.info(f"Using fakeredis as Redis fallback (reason={reason})")
+        except Exception as ex:
+            logger.warning(f"fakeredis not available or failed to init: {ex}")
+            self._client = None
+            self._available = False
+            self._using_fake = False
+
     def _ensure_connection(self):
-        """确保连接可用（延迟检查）"""
-        if not self._connection_checked:
-            try:
-                self._client.ping()
-                self._connection_checked = True
-                self._available = True
-            except redis.ConnectionError as e:
-                logger.warning(f"Redis connection failed: {e}")
-                # 标记为已检查，避免重复尝试；并将可用性设为 False
-                self._connection_checked = True
-                self._available = False
-    
+        """确保连接可用（延迟检查）。如果真实 Redis 不可达并且 fakeredis 可用，则自动回退。"""
+        if self._connection_checked:
+            return
+
+        if self._client is None:
+            # 没有客户端，尝试回退到 fakeredis
+            self._try_use_fakeredis(reason="no-client")
+            self._connection_checked = True
+            return
+
+        # 若已经是 fakeredis，不需要 ping
+        if getattr(self, '_using_fake', False):
+            self._connection_checked = True
+            self._available = True
+            return
+
+        try:
+            # 做一次轻量 ping 检查
+            self._client.ping()
+            self._connection_checked = True
+            self._available = True
+        except Exception as e:
+            logger.warning(f"Redis connection failed: {e}")
+            # 尝试自动回退到 fakeredis（如果可用）
+            self._try_use_fakeredis(reason="ping-failed")
+            self._connection_checked = True
+
     @property
-    def client(self) -> redis.Redis:
-        """获取Redis客户端"""
+    def client(self) -> Any:
+        """获取底层 Redis 客户端（真实或 fakeredis）。"""
         self._ensure_connection()
         return self._client
-    
+
     def get(self, key: str) -> Optional[str]:
-        """获取值"""
         try:
             self._ensure_connection()
-            if not getattr(self, '_available', True):
+            if not getattr(self, '_available', False):
                 return None
             return self._client.get(key)
         except Exception as e:
             logger.debug(f"Redis get error for key {key}: {e}")
             return None
-    
+
     def set(self, key: str, value: Any, ex: Optional[int] = None) -> bool:
-        """设置值"""
         if isinstance(value, (dict, list)):
             value = json.dumps(value, ensure_ascii=False)
         try:
             self._ensure_connection()
-            if not getattr(self, '_available', True):
+            if not getattr(self, '_available', False):
                 return False
             return self._client.set(key, value, ex=ex)
         except Exception as e:
             logger.debug(f"Redis set error for key {key}: {e}")
             return False
-    
+
     def delete(self, key: str) -> int:
-        """删除键"""
         try:
             self._ensure_connection()
-            if not getattr(self, '_available', True):
+            if not getattr(self, '_available', False):
                 return 0
             return self._client.delete(key)
         except Exception as e:
             logger.debug(f"Redis delete error for key {key}: {e}")
             return 0
-    
+
     def exists(self, key: str) -> bool:
-        """检查键是否存在"""
         try:
             self._ensure_connection()
-            if not getattr(self, '_available', True):
+            if not getattr(self, '_available', False):
                 return False
             return bool(self._client.exists(key))
         except Exception as e:
             logger.debug(f"Redis exists error for key {key}: {e}")
             return False
-    
+
     def expire(self, key: str, time: int) -> bool:
-        """设置过期时间"""
         try:
             self._ensure_connection()
-            if not getattr(self, '_available', True):
+            if not getattr(self, '_available', False):
                 return False
             return self._client.expire(key, time)
         except Exception as e:
             logger.debug(f"Redis expire error for key {key}: {e}")
             return False
-    
+
     def get_json(self, key: str) -> Optional[Any]:
-        """获取JSON值"""
         value = self.get(key)
         if value:
             try:
@@ -120,17 +163,18 @@ class RedisClient:
             except json.JSONDecodeError:
                 return None
         return None
-    
+
     def set_json(self, key: str, value: Any, ex: Optional[int] = None) -> bool:
-        """设置JSON值"""
         return self.set(key, value, ex=ex)
-    
+
     def close(self):
-        """关闭连接"""
-        if self._client:
-            self._client.close()
+        if self._client and not getattr(self, '_using_fake', False):
+            try:
+                self._client.close()
+            except Exception:
+                pass
 
 
-# 全局Redis客户端实例
+# 全局 Redis 客户端实例
 redis_client = RedisClient()
 

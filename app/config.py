@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     # 冷热数据配置
     HOT_DATA_TTL: int = 3600  # Redis热数据TTL（秒）
     COLD_DATA_THRESHOLD: int = 86400  # 超过24小时的数据视为冷数据
+
+    # 是否在开发/测试环境使用 fakeredis（内存版 Redis）作为回退或替代。
+    # 设置环境变量 `USE_FAKE_REDIS=1` 可启用。默认关闭，以免影响生产环境。
+    USE_FAKE_REDIS: bool = False
     
     class Config:
         env_file = ".env"
