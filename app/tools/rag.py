@@ -124,7 +124,7 @@ class RAGTool:
             self._create_new_index()
     
     def _create_new_index(self):
-        """创建新的FAISS索引"""
+        """创建新的FAISS索引 - 使用混合HNSW+IVF_PQ索引"""
         # 延迟获取embedding_dim（只有在需要时才加载模型）
         if self.embedding_dim is None:
             # 尝试从已存在的索引获取维度
@@ -144,8 +144,29 @@ class RAGTool:
                     pass
             # 如果无法从现有索引获取，则加载模型
             self._ensure_model_loaded()
-        # 使用L2距离的平面索引
-        self._index = faiss.IndexFlatL2(self.embedding_dim)
+        
+        # 使用混合索引：HNSW + IVF_PQ
+        # 对于小数据集，使用HNSW；对于大数据集，使用IVF_PQ
+        try:
+            # 尝试创建混合索引
+            # 首先创建量化器（IVF）
+            nlist = min(100, max(10, self.embedding_dim // 10))  # 聚类中心数
+            quantizer = faiss.IndexHNSWFlat(self.embedding_dim, 32)  # HNSW作为量化器
+            
+            # 创建IVF_PQ索引
+            m = 8  # 子向量数
+            bits = 8  # 每个子向量的量化位数
+            self._index = faiss.IndexIVFPQ(quantizer, self.embedding_dim, nlist, m, bits)
+            
+            # 训练索引（需要先添加一些数据）
+            self._needs_training = True
+            logger.info(f"Created hybrid FAISS index (HNSW+IVF_PQ) with dimension {self.embedding_dim}")
+        except Exception as e:
+            logger.warning(f"Failed to create hybrid index, falling back to IndexFlatL2: {e}")
+            # Fallback到简单索引
+            self._index = faiss.IndexFlatL2(self.embedding_dim)
+            self._needs_training = False
+        
         self.metadata = []
         logger.info("Created new FAISS index")
     
@@ -193,9 +214,9 @@ class RAGTool:
         
         # 添加到索引
         embeddings = embeddings.astype('float32')
-        if self._index is None:
-            self._create_new_index()
-        self._index.add(embeddings)
+        if self.index is None:
+            self._ensure_index_initialized()
+        self.index.add(embeddings)
         
         # 保存元数据
         for i, doc in enumerate(documents):
@@ -224,10 +245,9 @@ class RAGTool:
             相似文档列表，包含文本、元数据和相似度分数
         """
         # 确保索引已初始化
-        if self._index is None:
-            self._ensure_index_initialized()
+        self._ensure_index_initialized()
         
-        if self._index is None or self._index.ntotal == 0:
+        if self.index is None or (hasattr(self.index, 'ntotal') and self.index.ntotal == 0):
             logger.warning("Index is empty, returning empty results")
             return []
         
@@ -244,8 +264,8 @@ class RAGTool:
             ).astype('float32')
         
         # 搜索 - 如果有过滤条件，获取更多结果以确保过滤后仍有足够的结果
-        search_k = min(self._index.ntotal, max(top_k * 3, 10) if filter_dict else top_k)
-        distances, indices = self._index.search(query_embedding, search_k)
+        search_k = min(self.index.ntotal, max(top_k * 3, 10) if filter_dict else top_k)
+        distances, indices = self.index.search(query_embedding, search_k)
         
         # 构建结果
         results = []

@@ -40,10 +40,53 @@ data/
 *.sqlite
 faiss_index/
 *.pkl
+*.csv
+*.tsv
+*.json
+!requirements.txt
+!pytest.ini
+!package.json
+!package-lock.json
+
+# Models and checkpoints
+models/
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.safetensors
+*.bin
+*.onnx
+*.pb
+checkpoints/
+weights/
+*.weights
+
+# Training data and outputs
+training_data/
+datasets/
+*.tfrecord
+*.tfrecords
+wandb/
+tensorboard_logs/
+runs/
+outputs/
+results/
+
+# Model cache
+.cache/
+.huggingface/
+transformers_cache/
+sentence_transformers_cache/
 
 # Logs
 logs/
 *.log
+app.log
+
+# FAISS index files
+*.index
+*.metadata
 
 # Testing
 .pytest_cache/

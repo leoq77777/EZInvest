@@ -9,6 +9,8 @@ from datetime import datetime
 import re
 from app.tools.rag import get_rag_tool
 from app.database.storage import storage_manager
+from app.services.news_stream_processor import news_stream_processor
+from app.tools.finbert_analyzer import finbert_analyzer
 import time
 
 logger = logging.getLogger(__name__)
@@ -222,28 +224,52 @@ class PolicyTool:
         
         for article in articles:
             try:
-                # 保存到MySQL
-                news_id = storage_manager.save_news_data(
-                    symbol=symbol,
-                    title=article['title'],
-                    content=article['content'],
-                    source=article['source'],
-                    url=article.get('url'),
-                    published_at=article['published_at']
-                )
-                saved_ids.append(news_id)
-                
-                # 添加到向量数据库
-                get_rag_tool().add_documents([{
-                    'text': f"{article['title']}\n{article['content']}",
-                    'metadata': {
-                        'symbol': symbol,
-                        'news_id': news_id,
-                        'source': article['source'],
-                        'url': article.get('url', ''),
-                        'published_at': article['published_at'].isoformat()
-                    }
-                }])
+                if use_stream:
+                    # 使用Redis Streams进行低延迟摄取
+                    message_id = news_stream_processor.ingest_news(
+                        symbol=symbol,
+                        title=article['title'],
+                        content=article['content'],
+                        source=article['source'],
+                        url=article.get('url'),
+                        published_at=article['published_at']
+                    )
+                    if message_id:
+                        # 立即处理（可选，也可以由后台任务处理）
+                        processed = news_stream_processor.process_stream(count=1, block=0)
+                        if processed:
+                            saved_ids.append(processed[0].get('news_id'))
+                else:
+                    # 传统方式：直接保存
+                    # 使用FinBERT进行情感分析
+                    sentiment = finbert_analyzer.analyze_sentiment(
+                        f"{article['title']}\n{article['content']}"
+                    )
+                    
+                    # 保存到MySQL
+                    news_id = storage_manager.save_news_data(
+                        symbol=symbol,
+                        title=article['title'],
+                        content=article['content'],
+                        source=article['source'],
+                        url=article.get('url'),
+                        published_at=article['published_at']
+                    )
+                    saved_ids.append(news_id)
+                    
+                    # 添加到向量数据库（包含情感信息）
+                    get_rag_tool().add_documents([{
+                        'text': f"{article['title']}\n{article['content']}",
+                        'metadata': {
+                            'symbol': symbol,
+                            'news_id': news_id,
+                            'source': article['source'],
+                            'url': article.get('url', ''),
+                            'published_at': article['published_at'].isoformat(),
+                            'sentiment': sentiment['label'],
+                            'sentiment_score': sentiment['sentiment_score']
+                        }
+                    }])
                 
             except Exception as e:
                 logger.error(f"Failed to save news: {e}")

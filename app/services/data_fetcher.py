@@ -166,10 +166,17 @@ class AkshareDataFetcher:
                 return False
             
             # 保存每日数据
+            # 确定日期列名
+            date_col = '日期' if '日期' in df.columns else ('date' if 'date' in df.columns else df.columns[0])
+            
             for _, row in df.iterrows():
-                # 处理日期列（可能是'日期'或'date'）
-                date_col = '日期' if '日期' in df.columns else 'date'
-                date = pd.to_datetime(row[date_col]) if isinstance(row[date_col], str) else row[date_col]
+                # 处理日期列
+                if date_col in df.columns:
+                    date_value = row[date_col]
+                    date = pd.to_datetime(date_value) if isinstance(date_value, str) else date_value
+                else:
+                    logger.warning(f"Date column not found, using first column")
+                    date = pd.to_datetime(row.iloc[0]) if isinstance(row.iloc[0], str) else row.iloc[0]
                 
                 data = {
                     "open": float(row.get('开盘', row.get('open', 0)) or 0),

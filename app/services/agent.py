@@ -1,5 +1,6 @@
 """
 Agent核心逻辑 - 工作流编排和工具调用
+支持RL驱动的工具选择（可选）
 """
 import re
 import logging
@@ -9,15 +10,45 @@ from app.services.data_fetcher import data_fetcher
 from app.services.quant_tool import quant_tool
 from app.services.policy_tool import policy_tool
 from app.database.storage import storage_manager
+from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+# 尝试导入RL Agent（可选）
+try:
+    from app.services.rl_retrieval.agent import RLRetrievalAgent
+    from app.services.rl_retrieval.environment import RetrievalEnvironment
+    RL_AVAILABLE = True
+except ImportError:
+    RL_AVAILABLE = False
+    logger.info("RL retrieval not available, using rule-based tool selection")
 
 
 class InvestmentAgent:
     """投资助手Agent"""
     
-    def __init__(self):
+    def __init__(self, use_rl: bool = False, rl_model_path: Optional[str] = None):
+        """
+        初始化Agent
+        
+        Args:
+            use_rl: 是否使用RL驱动的工具选择
+            rl_model_path: RL模型路径（如果使用RL）
+        """
         self.prompt_manager = PromptManager()
+        self.use_rl = use_rl and RL_AVAILABLE
+        self.rl_agent = None
+        self.rl_env = None
+        
+        if self.use_rl:
+            try:
+                self.rl_agent = RLRetrievalAgent()
+                if rl_model_path:
+                    self.rl_agent.load(rl_model_path)
+                logger.info("RL retrieval agent initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize RL agent: {e}, falling back to rule-based")
+                self.use_rl = False
     
     def _extract_symbol(self, query: str, expanded_query: str = None) -> Optional[str]:
         """
@@ -149,7 +180,10 @@ class InvestmentAgent:
             from app.database.mysql_client import SessionLocal, FinancialData
             import json
             
-            db = SessionLocal()
+            from app.database.mysql_client import get_db
+            # 使用context manager确保连接关闭
+            db_gen = get_db()
+            db = next(db_gen)
             try:
                 end_date = datetime.now()
                 start_date = end_date - timedelta(days=7)
@@ -167,7 +201,10 @@ class InvestmentAgent:
                         data = json.loads(result.data)
                         summary += f"{result.date.strftime('%Y-%m-%d')}: {data.get('close', 'N/A')}\n"
             finally:
-                db.close()
+                try:
+                    next(db_gen, None)  # 确保generator关闭
+                except:
+                    pass
             
             return summary
         except Exception as e:
@@ -226,14 +263,18 @@ class InvestmentAgent:
             except Exception as e:
                 logger.warning(f"Data check/fetch failed: {e}")
             
-            # 步骤4: 量化分析
-            logger.info(f"Running quant analysis for {symbol}")
-            quant_analysis = quant_tool.generate_analysis_report(symbol)
-            
-            # 步骤5: 政策新闻分析
-            logger.info(f"Running policy analysis for {symbol}")
-            news_query = expanded.get('expanded_query', query)
-            news_analysis = policy_tool.get_news_analysis(symbol, news_query)
+            # 步骤4-5: 使用RL或规则选择工具
+            if self.use_rl and self.rl_agent:
+                # RL驱动的工具选择
+                quant_analysis, news_analysis = self._rl_tool_selection(symbol, query, expanded)
+            else:
+                # 规则驱动的工具选择（默认）
+                logger.info(f"Running quant analysis for {symbol}")
+                quant_analysis = quant_tool.generate_analysis_report(symbol)
+                
+                logger.info(f"Running policy analysis for {symbol}")
+                news_query = expanded.get('expanded_query', query)
+                news_analysis = policy_tool.get_news_analysis(symbol, news_query)
             
             # 步骤6: 获取数据摘要
             data_summary = self._get_data_summary(symbol)
@@ -326,8 +367,68 @@ class InvestmentAgent:
             temperature=0.7
         ):
             yield chunk
+    
+    def _rl_tool_selection(self, symbol: str, query: str, expanded: Dict[str, Any]) -> tuple:
+        """
+        使用RL选择工具
+        
+        Args:
+            symbol: 股票代码
+            query: 查询
+            expanded: 扩展查询信息
+        
+        Returns:
+            (quant_analysis, news_analysis)
+        """
+        try:
+            # 创建RL环境
+            self.rl_env = RetrievalEnvironment(max_steps=3)
+            state = self.rl_env.reset(query=query, symbol=symbol)
+            
+            quant_analysis = None
+            news_analysis = None
+            
+            # 运行RL选择
+            done = False
+            while not done:
+                action = self.rl_agent.select_action(state, training=False)
+                next_state, reward, done, info = self.rl_env.step(action)
+                
+                tool_name = info['tool']
+                result = info['result']
+                
+                # 根据选择的工具保存结果
+                if tool_name == 'quant_tool' and result:
+                    quant_analysis = result
+                elif tool_name == 'policy_tool' and result:
+                    news_analysis = result
+                elif tool_name == 'rag_tool' and result:
+                    # RAG结果可以作为补充
+                    pass
+                
+                state = next_state
+            
+            # 如果RL没有选择某些工具，使用默认值
+            if quant_analysis is None:
+                quant_analysis = quant_tool.generate_analysis_report(symbol)
+            if news_analysis is None:
+                news_query = expanded.get('expanded_query', query)
+                news_analysis = policy_tool.get_news_analysis(symbol, news_query)
+            
+            return quant_analysis, news_analysis
+        except Exception as e:
+            logger.warning(f"RL tool selection failed: {e}, falling back to rule-based")
+            # Fallback到规则选择
+            quant_analysis = quant_tool.generate_analysis_report(symbol)
+            news_query = expanded.get('expanded_query', query)
+            news_analysis = policy_tool.get_news_analysis(symbol, news_query)
+            return quant_analysis, news_analysis
 
 
-# 全局Agent实例
-investment_agent = InvestmentAgent()
+# 全局Agent实例（默认不使用RL，可通过配置启用）
+from app.config import settings
+investment_agent = InvestmentAgent(
+    use_rl=getattr(settings, 'USE_RL_RETRIEVAL', False),
+    rl_model_path=getattr(settings, 'RL_MODEL_PATH', None)
+)
 

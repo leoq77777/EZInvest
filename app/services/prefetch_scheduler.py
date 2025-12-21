@@ -4,6 +4,7 @@
 import schedule
 import time
 import logging
+import threading
 from datetime import datetime
 from typing import List
 from app.services.data_fetcher import data_fetcher
@@ -18,27 +19,34 @@ class PrefetchScheduler:
     def __init__(self):
         self.is_running = False
         self.symbols_to_prefetch: List[str] = []
+        self._lock = threading.Lock()  # 保护symbols_to_prefetch的锁
     
     def add_symbol(self, symbol: str):
         """添加需要预取的股票代码"""
-        if symbol not in self.symbols_to_prefetch:
-            self.symbols_to_prefetch.append(symbol)
-            logger.info(f"Added {symbol} to prefetch list")
+        with self._lock:
+            if symbol not in self.symbols_to_prefetch:
+                self.symbols_to_prefetch.append(symbol)
+                logger.info(f"Added {symbol} to prefetch list")
     
     def remove_symbol(self, symbol: str):
         """移除预取股票代码"""
-        if symbol in self.symbols_to_prefetch:
-            self.symbols_to_prefetch.remove(symbol)
-            logger.info(f"Removed {symbol} from prefetch list")
+        with self._lock:
+            if symbol in self.symbols_to_prefetch:
+                self.symbols_to_prefetch.remove(symbol)
+                logger.info(f"Removed {symbol} from prefetch list")
     
     def prefetch_data(self):
         """执行数据预取"""
         if not settings.DATA_PREFETCH_ENABLED:
             return
         
-        logger.info(f"Starting data prefetch for {len(self.symbols_to_prefetch)} symbols")
+        # 线程安全地获取symbols列表
+        with self._lock:
+            symbols_to_fetch = self.symbols_to_prefetch.copy()
         
-        for symbol in self.symbols_to_prefetch:
+        logger.info(f"Starting data prefetch for {len(symbols_to_fetch)} symbols")
+        
+        for symbol in symbols_to_fetch:
             try:
                 logger.info(f"Prefetching data for {symbol}")
                 success = data_fetcher.fetch_and_save_stock_data(symbol)

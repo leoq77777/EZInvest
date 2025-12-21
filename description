@@ -1,0 +1,16 @@
+EZInvest, AI Agent for Investment Consulting Assistant
+-Built a reinforcement learning-driven retrieval pipeline with Ray, optimizing tool selection for financial queries and reducing irrelevant data retrieval by 35% on benchmarks.
+-Integrated FinBERT as a specialized module for financial text analysis, improving sentiment extraction accuracy in earnings calls by 15% over baseline LLMs.
+-Fine-tuned gpt-oss:20B using QLoRA and 4-bit quantization on a single consumer GPU, cutting memory usage by 65% while preserving analysis quality.
+-Implemented a hybrid FAISS (HNSW+IVF_PQ) and Redis Streams data pipeline for low-latency financial news ingestion.
+
+
+
+
+
+
+
+
+I am updating this project with the latest requirements.
+my requirements: 
+analysis the avaibility of 4 bullet points decribed above. extend each pointt, compare them with what we have done in the current directory, update the codes, refactor the project, make it match the bullet points.

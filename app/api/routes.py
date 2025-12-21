@@ -2,7 +2,7 @@
 API路由
 """
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import Optional
 from app.services.agent import investment_agent
 import logging
@@ -16,6 +16,15 @@ class QueryRequest(BaseModel):
     """查询请求模型"""
     query: str
     stream: bool = False
+    
+    @validator('query')
+    def validate_query(cls, v):
+        """验证查询字符串"""
+        if not v or not v.strip():
+            raise ValueError('查询不能为空')
+        if len(v) > 1000:
+            raise ValueError('查询长度不能超过1000字符')
+        return v.strip()
 
 
 class QueryResponse(BaseModel):

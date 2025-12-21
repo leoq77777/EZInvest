@@ -164,6 +164,115 @@ class RedisClient:
                 return None
         return None
 
+    def xadd(self, stream: str, fields: Dict[str, Any], maxlen: Optional[int] = None) -> Optional[str]:
+        """
+        向Redis Stream添加消息
+        
+        Args:
+            stream: Stream名称
+            fields: 消息字段字典
+            maxlen: 最大长度（可选，用于限制Stream大小）
+        
+        Returns:
+            消息ID或None
+        """
+        try:
+            self._ensure_connection()
+            if not getattr(self, '_available', False):
+                return None
+            
+            # 转换值为字符串
+            str_fields = {k: json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else str(v) 
+                         for k, v in fields.items()}
+            
+            # 添加消息
+            message_id = self._client.xadd(stream, str_fields, maxlen=maxlen)
+            return message_id
+        except Exception as e:
+            logger.error(f"Redis xadd error for stream {stream}: {e}")
+            return None
+    
+    def xread(self, streams: Dict[str, str], count: Optional[int] = None, block: Optional[int] = None) -> Dict[str, List]:
+        """
+        从Redis Stream读取消息
+        
+        Args:
+            streams: {stream_name: last_id} 字典
+            count: 每次读取的最大消息数
+            block: 阻塞时间（毫秒）
+        
+        Returns:
+            {stream_name: [messages]} 字典
+        """
+        try:
+            self._ensure_connection()
+            if not getattr(self, '_available', False):
+                return {}
+            
+            result = self._client.xread(streams, count=count, block=block)
+            # 转换结果格式
+            return {stream.decode() if isinstance(stream, bytes) else stream: messages 
+                   for stream, messages in result}
+        except Exception as e:
+            logger.error(f"Redis xread error: {e}")
+            return {}
+    
+    def xgroup_create(self, stream: str, group: str, id: str = "0", mkstream: bool = True) -> bool:
+        """
+        创建消费者组
+        
+        Args:
+            stream: Stream名称
+            group: 消费者组名称
+            id: 起始ID（默认"0"表示从开始）
+            mkstream: 如果Stream不存在是否创建
+        
+        Returns:
+            是否成功
+        """
+        try:
+            self._ensure_connection()
+            if not getattr(self, '_available', False):
+                return False
+            
+            self._client.xgroup_create(stream, group, id=id, mkstream=mkstream)
+            return True
+        except Exception as e:
+            # 如果组已存在，忽略错误
+            if "BUSYGROUP" in str(e):
+                logger.debug(f"Consumer group {group} already exists")
+                return True
+            logger.error(f"Redis xgroup_create error: {e}")
+            return False
+    
+    def xreadgroup(self, group: str, consumer: str, streams: Dict[str, str], 
+                   count: Optional[int] = None, block: Optional[int] = None) -> Dict[str, List]:
+        """
+        从消费者组读取消息
+        
+        Args:
+            group: 消费者组名称
+            consumer: 消费者名称
+            streams: {stream_name: ">"} 字典，">"表示读取未处理的消息
+            count: 每次读取的最大消息数
+            block: 阻塞时间（毫秒）
+        
+        Returns:
+            {stream_name: [messages]} 字典
+        """
+        try:
+            self._ensure_connection()
+            if not getattr(self, '_available', False):
+                return {}
+            
+            result = self._client.xreadgroup(group, consumer, streams, count=count, block=block)
+            # 转换结果格式
+            return {stream.decode() if isinstance(stream, bytes) else stream: messages 
+                   for stream, messages in result}
+        except Exception as e:
+            logger.error(f"Redis xreadgroup error: {e}")
+            return {}
+    
     def set_json(self, key: str, value: Any, ex: Optional[int] = None) -> bool:
         return self.set(key, value, ex=ex)
 

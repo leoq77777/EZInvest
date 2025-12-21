@@ -36,10 +36,25 @@ class Settings(BaseSettings):
     # FAISS配置
     FAISS_INDEX_PATH: str = "./data/faiss_index"
     EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    # FAISS索引类型: "flat", "hnsw", "ivf_pq", "hybrid"
+    FAISS_INDEX_TYPE: str = "hybrid"  # 使用混合索引（HNSW+IVF_PQ）
     # 可选的 SQLite URL（用于本地开发/测试），例如：sqlite:///./dev.db 或 sqlite:///:memory:
     SQLITE_URL: str = ""
     # 是否使用轻量级 fallback 嵌入（当环境中缺少或无法安全加载 heavy ML 库时启用）
     EMBEDDING_FALLBACK: bool = True
+    
+    # FinBERT配置
+    USE_FINBERT: bool = True  # 是否使用FinBERT进行情感分析
+    FINBERT_MODEL: str = "yiyanghkust/finbert-tone"
+    
+    # Redis Streams配置
+    NEWS_STREAM_NAME: str = "financial_news_stream"
+    NEWS_STREAM_MAXLEN: int = 10000  # Stream最大长度
+    USE_REDIS_STREAMS: bool = True  # 是否使用Redis Streams
+    
+    # RL检索配置
+    USE_RL_RETRIEVAL: bool = False  # 是否使用RL驱动的工具选择
+    RL_MODEL_PATH: Optional[str] = None  # RL模型路径（如果使用RL）
     
     # 数据预取配置
     DATA_PREFETCH_ENABLED: bool = True
