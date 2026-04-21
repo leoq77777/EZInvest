@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# Docker
+docker-compose.override.yml
+
+# Data & Models (large files)
+data/raw/
+data/processed/
+models/checkpoints/
+models/finetuned/
+*.bin
+*.safetensors
+*.gguf
+
+# FAISS indexes
+*.faiss
+*.index
+
+# Redis dump
+dump.rdb
+
+# Node
+node_modules/
+.next/
+out/
+frontend/.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test & Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Logs
+*.log
+logs/

@@ -1,0 +1,114 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./data:/data
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+    depends_on:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ezinvest
+      POSTGRES_PASSWORD: ezinvest
+      POSTGRES_DB: ezinvest
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ezinvest"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  # ──────────────────────────────────────────────
+  # Local LLM server (choose ONE of the profiles)
+  # ──────────────────────────────────────────────
+
+  # Profile: vllm (GPU required)
+  # Start with: docker compose --profile vllm up
+  vllm:
+    image: vllm/vllm-openai:latest
+    profiles: ["vllm"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - model_cache:/root/.cache
+      - ./models:/models
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: >
+      --model ${LLM_MODEL_PATH:-Qwen/Qwen2.5-7B}
+      --port 8000
+      --max-model-len 4096
+      --dtype auto
+      --trust-remote-code
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # Profile: ollama (CPU or GPU, easiest setup)
+  # Start with: docker compose --profile ollama up
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  redis_data:
+  pg_data:
+  model_cache:
+  ollama_data:
