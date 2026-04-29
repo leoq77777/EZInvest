@@ -20,6 +20,7 @@ export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  thought?: string;
   toolCalls?: ToolCall[];
   plan?: PlanStep[];
   isSummarizing?: boolean;
@@ -38,6 +39,7 @@ interface ChatState {
   addToolCall: (msgId: string, toolCall: ToolCall) => void;
   updateToolCall: (msgId: string, tool: string, update: Partial<ToolCall>) => void;
   setPlan: (msgId: string, steps: PlanStep[]) => void;
+  setThought: (msgId: string, thought: string) => void;
   updateStep: (msgId: string, stepId: string, update: Partial<PlanStep>) => void;
   setSummarizing: (msgId: string, v: boolean) => void;
   finalizeMessage: (msgId: string, latencyMs: number) => void;
@@ -114,6 +116,13 @@ export const useChatStore = create<ChatState>((set) => ({
     set((s) => ({
       messages: s.messages.map((m) =>
         m.id === msgId ? { ...m, plan: steps } : m,
+      ),
+    })),
+
+  setThought: (msgId, thought) =>
+    set((s) => ({
+      messages: s.messages.map((m) =>
+        m.id === msgId ? { ...m, thought } : m,
       ),
     })),
 

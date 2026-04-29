@@ -8,6 +8,7 @@ from app.schemas.chat import (
     ChatRequest,
     ChatResponse,
     DoneEvent,
+    ThoughtEvent,
     PlanEvent,
     PlanStepInfo,
     StepUpdateEvent,
@@ -55,7 +56,13 @@ async def chat_stream(request: ChatRequest):
             ):
                 etype = event["type"]
 
-                if etype == "plan":
+                if etype == "thought":
+                    yield _sse_event(
+                        "thought",
+                        ThoughtEvent(content=event["data"]["content"]).model_dump(),
+                    )
+
+                elif etype == "plan":
                     yield _sse_event(
                         "plan",
                         PlanEvent(

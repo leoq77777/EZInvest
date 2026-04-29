@@ -3,7 +3,9 @@
 import { Message } from "@/lib/store";
 import { ToolCallCard } from "./ToolCallCard";
 import { PlanProgressView } from "./PlanProgressView";
-import { User, Bot } from "lucide-react";
+import { User, Bot, Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export function MessageBubble({ message }: { message: Message }) {
   const isUser = message.role === "user";
@@ -17,13 +19,21 @@ export function MessageBubble({ message }: { message: Message }) {
         </div>
       )}
 
-      <div className={`max-w-[75%] space-y-2 ${isUser ? "items-end" : ""}`}>
+      <div className={`max-w-[85%] space-y-2 ${isUser ? "items-end" : ""}`}>
         {isUser ? (
-          <div className="px-4 py-3 rounded-2xl rounded-tr-sm bg-[var(--color-accent)] text-white">
+          <div className="px-4 py-3 rounded-2xl rounded-tr-sm bg-[var(--color-accent)] text-white shadow-sm">
             <p className="whitespace-pre-wrap text-sm">{message.content}</p>
           </div>
         ) : (
           <>
+            {/* Thought/Progress message */}
+            {message.thought && !message.content && (
+              <div className="flex items-center gap-2 px-1 py-1 text-xs text-[var(--color-text-muted)] animate-pulse">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>{message.thought}</span>
+              </div>
+            )}
+
             {/* Plan progress (replaces flat ToolCallCards when present) */}
             {hasPlan ? (
               <PlanProgressView
@@ -42,10 +52,31 @@ export function MessageBubble({ message }: { message: Message }) {
             )}
 
             {message.content && (
-              <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-[var(--color-surface)] border border-[var(--color-border)]">
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">
+              <div className="px-5 py-4 rounded-2xl rounded-tl-sm bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm prose prose-sm prose-invert max-w-none">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ ...props }) => <h1 className="text-lg font-bold mb-2 text-[var(--color-accent)]" {...props} />,
+                    h2: ({ ...props }) => <h2 className="text-md font-bold mb-2 mt-4 border-b border-[var(--color-border)] pb-1" {...props} />,
+                    h3: ({ ...props }) => <h3 className="text-sm font-bold mb-1 mt-3" {...props} />,
+                    p: ({ ...props }) => <p className="mb-3 leading-relaxed text-sm text-[var(--color-text)]" {...props} />,
+                    ul: ({ ...props }) => <ul className="list-disc pl-5 mb-3 space-y-1" {...props} />,
+                    ol: ({ ...props }) => <ol className="list-decimal pl-5 mb-3 space-y-1" {...props} />,
+                    li: ({ ...props }) => <li className="text-sm" {...props} />,
+                    table: ({ ...props }) => (
+                      <div className="overflow-x-auto my-4">
+                        <table className="min-w-full divide-y divide-[var(--color-border)] border border-[var(--color-border)] rounded-lg" {...props} />
+                      </div>
+                    ),
+                    thead: ({ ...props }) => <thead className="bg-[var(--color-surface-hover)]" {...props} />,
+                    th: ({ ...props }) => <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider" {...props} />,
+                    td: ({ ...props }) => <td className="px-3 py-2 text-sm border-t border-[var(--color-border)]" {...props} />,
+                    blockquote: ({ ...props }) => <blockquote className="border-l-4 border-[var(--color-accent)] pl-4 italic my-4 text-[var(--color-text-muted)]" {...props} />,
+                    code: ({ ...props }) => <code className="bg-[var(--color-surface-hover)] px-1 rounded text-[var(--color-accent)]" {...props} />,
+                  }}
+                >
                   {message.content}
-                </p>
+                </ReactMarkdown>
               </div>
             )}
 

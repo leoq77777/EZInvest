@@ -12,10 +12,22 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     cors_origins: List[str] = ["http://localhost:3000"]
 
-    # LLM
-    llm_model_path: str = "models/finetuned/qwen2.5-7b-qlora"
-    llm_base_url: str = "http://localhost:8000/v1"
+    # LLM Provider Selection
+    llm_provider: str = "local"  # options: local, openai, deepseek
+
+    # LLM - Local (Ollama/vLLM)
+    llm_model_path: str = "qwen3.5:9b"
+    llm_base_url: str = "http://localhost:11434/v1"
     llm_api_key: str = "not-needed"
+
+    # LLM - DeepSeek
+    deepseek_api_key: str = ""
+    deepseek_model: str = "deepseek-chat"
+    deepseek_base_url: str = "https://api.deepseek.com/v1"
+
+    # LLM - OpenAI (Optional)
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4-turbo"
 
     # FinBERT
     finbert_model_path: str = "ProsusAI/finbert"

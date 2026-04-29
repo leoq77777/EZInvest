@@ -19,22 +19,27 @@ const TOOL_CONFIG: Record<
 > = {
   retriever: {
     icon: Search,
-    label: "Document Search",
+    label: "知识库检索",
     color: "text-blue-400",
+  },
+  web_scraper: {
+    icon: Sparkles,
+    label: "联网实时搜索",
+    color: "text-cyan-400",
   },
   sentiment_analyzer: {
     icon: BarChart3,
-    label: "Sentiment Analysis",
+    label: "情感倾向分析",
     color: "text-purple-400",
   },
   calculator: {
     icon: Calculator,
-    label: "Financial Calculator",
+    label: "财务数据计算",
     color: "text-emerald-400",
   },
   market_data: {
     icon: TrendingUp,
-    label: "Market Data",
+    label: "行情数据获取",
     color: "text-amber-400",
   },
 };
@@ -69,7 +74,7 @@ export function PlanProgressView({
       {/* Progress header */}
       <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
         <span className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
-          Research Plan
+          投研执行计划
         </span>
         <span className="text-xs text-[var(--color-text-muted)]">
           {completedCount}/{steps.length}
@@ -133,7 +138,7 @@ export function PlanProgressView({
         <div className="px-4 py-3 border-t border-[var(--color-border)] flex items-center gap-2 bg-[var(--color-accent)]/5">
           <Sparkles className="w-4 h-4 text-[var(--color-accent)] animate-pulse" />
           <span className="text-sm text-[var(--color-text-muted)]">
-            Generating investment report...
+            正在撰写投资报告...
           </span>
         </div>
       )}

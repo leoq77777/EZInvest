@@ -1,4 +1,4 @@
-"""Hybrid retriever – dense (FAISS) + sparse (BM25) with RRF fusion and Redis caching."""
+"""Hybrid retriever – dense (FAISS) + sparse (BM25) + dynamic (pgvector) with RRF fusion and Redis caching."""
 
 import hashlib
 import json
@@ -14,39 +14,39 @@ logger = logging.getLogger(__name__)
 
 
 def _rrf_fuse(
-    dense_results: list[dict],
-    sparse_results: list[dict],
+    *result_lists: list[dict],
     k: int = 60,
 ) -> list[dict]:
-    """Reciprocal Rank Fusion to merge dense and sparse result lists.
+    """Reciprocal Rank Fusion to merge N ranked result lists.
 
     RRF(d) = Σ 1 / (k + rank(d)) across all result lists.
+
+    Uses the text content as dedup key so that the same passage from
+    different sources (e.g. FAISS and pgvector) is merged correctly.
     """
-    scores: dict[int, float] = {}
-    doc_map: dict[int, dict] = {}
+    scores: dict[str, float] = {}
+    doc_map: dict[str, dict] = {}
 
-    for rank_pos, doc in enumerate(dense_results):
-        doc_id = doc["doc_id"]
-        scores[doc_id] = scores.get(doc_id, 0) + 1.0 / (k + rank_pos + 1)
-        doc_map[doc_id] = doc
+    for result_list in result_lists:
+        for rank_pos, doc in enumerate(result_list):
+            # Use a content-based key for deduplication across sources
+            dedup_key = doc.get("text", "")[:200]
+            scores[dedup_key] = scores.get(dedup_key, 0) + 1.0 / (k + rank_pos + 1)
+            if dedup_key not in doc_map:
+                doc_map[dedup_key] = doc
 
-    for rank_pos, doc in enumerate(sparse_results):
-        doc_id = doc["doc_id"]
-        scores[doc_id] = scores.get(doc_id, 0) + 1.0 / (k + rank_pos + 1)
-        doc_map[doc_id] = doc
-
-    sorted_ids = sorted(scores.keys(), key=lambda d: scores[d], reverse=True)
+    sorted_keys = sorted(scores.keys(), key=lambda d: scores[d], reverse=True)
     fused = []
-    for doc_id in sorted_ids:
-        doc = doc_map[doc_id].copy()
-        doc["score"] = round(scores[doc_id], 6)
+    for key in sorted_keys:
+        doc = doc_map[key].copy()
+        doc["score"] = round(scores[key], 6)
         fused.append(doc)
 
     return fused
 
 
 class HybridRetriever:
-    """Combines FAISS dense search + BM25 sparse search with Redis caching."""
+    """Combines FAISS dense search + BM25 sparse search + pgvector dynamic search with Redis caching."""
 
     def __init__(self):
         settings = get_settings()
@@ -150,8 +150,18 @@ class HybridRetriever:
             results.append(doc)
         return results
 
+    async def _dynamic_search(self, query: str, top_k: int) -> list[dict]:
+        """Search the dynamic pgvector store for web-scraped content."""
+        try:
+            from app.rag.pgvector_store import get_dynamic_store
+            store = get_dynamic_store()
+            return await store.similarity_search(query, k=top_k)
+        except Exception as e:
+            logger.warning("Dynamic pgvector search failed (this is OK if DB is not running): %s", e)
+            return []
+
     async def retrieve(self, query: str, top_k: int = 5) -> list[dict]:
-        """Execute hybrid retrieval with caching, fusion, and reranking."""
+        """Execute hybrid retrieval across FAISS + BM25 + pgvector with caching, fusion, and reranking."""
         redis = await self._get_redis()
         cache_key = self._cache_key(query, top_k)
 
@@ -168,15 +178,32 @@ class HybridRetriever:
 
         dense_results = self._dense_search(query, fetch_k)
         sparse_results = self._sparse_search(query, fetch_k)
+        dynamic_results = []
+        try:
+            # Add a safety check or short timeout if possible, 
+            # though similarity_search is already async
+            dynamic_results = await self._dynamic_search(query, top_k=fetch_k)
+        except Exception as e:
+            logger.error(f"Dynamic search failed or timed out: {e}")
+            dynamic_results = []
 
-        if not dense_results and not sparse_results:
+        all_empty = not dense_results and not sparse_results and not dynamic_results
+        if all_empty:
             return []
 
-        fused = _rrf_fuse(dense_results, sparse_results)
+        fused = _rrf_fuse(dense_results, sparse_results, dynamic_results)
         candidates = fused[: top_k * 3]
 
-        from app.rag.reranker import rerank
-        reranked = rerank(query, candidates, top_k=top_k)
+        # If we have enough candidates, rerank. Otherwise return as-is.
+        if len(candidates) >= 2:
+            try:
+                from app.rag.reranker import rerank
+                reranked = rerank(query, candidates, top_k=top_k)
+            except Exception as e:
+                logger.warning("Reranker failed, returning fused results: %s", e)
+                reranked = candidates[:top_k]
+        else:
+            reranked = candidates[:top_k]
 
         if redis:
             try:

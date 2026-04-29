@@ -16,6 +16,9 @@ class ChatRequest(BaseModel):
 # SSE event payloads
 # ---------------------------------------------------------------------------
 
+class ThoughtEvent(BaseModel):
+    content: str
+
 class ToolCallStatus(str, Enum):
     RUNNING = "running"
     DONE = "done"

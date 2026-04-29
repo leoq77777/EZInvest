@@ -1,0 +1,309 @@
+INFO:     Started server process [4442]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
+INFO:     127.0.0.1:54426 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 01:19:14,425 | INFO     | langchain_openai.chat_models._client_utils | langchain-openai detected http_proxy, https_proxy, all_proxy and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+2026-04-30 01:19:14,524 | INFO     | app.agent.graph | LLM client initialized: provider=deepseek base_url=https://api.deepseek.com/v1 model=deepseek-chat
+2026-04-30 01:19:14,700 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 01:19:17,809 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: semiconductor ETF performance 2025 recent news
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 01:19:18,025 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search ConnectError: ('error sending request for url (https://www.bing.com/search?q=semiconductor+ETF+performance+2025+recent+news)', 'https://www.bing.com/search?q=semiconductor+ETF+performance+2025+recent+news')
+2026-04-30 01:19:18,025 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search ConnectError: ('error sending request for url (https://www.bing.com/search?q=semiconductor+ETF+performance+2025+recent+news)', 'https://www.bing.com/search?q=semiconductor+ETF+performance+2025+recent+news')
+2026-04-30 01:19:23,076 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=SMH attempt=1 latency=3685ms
+2026-04-30 01:19:23,121 | INFO     | faiss.loader | Loading faiss.
+<frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+<frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+<frozen importlib._bootstrap>:241: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+2026-04-30 01:19:23,153 | INFO     | faiss.loader | Successfully loaded faiss.
+2026-04-30 01:19:23,156 | INFO     | app.rag.retriever | FAISS index loaded: 20 vectors
+2026-04-30 01:19:24,782 | INFO     | app.rag.embedder | Loading embedding model: BAAI/bge-large-en-v1.5
+2026-04-30 01:19:24,793 | INFO     | sentence_transformers.base.model | No device provided, using mps
+2026-04-30 01:19:34,235 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:34,416 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-large-en-v1.5/d4aa6901d3a41ba39fb536a557fa166f842b0e09/config_sentence_transformers.json "HTTP/1.1 200 OK"
+2026-04-30 01:19:34,420 | INFO     | sentence_transformers.base.model | Loading SentenceTransformer model from BAAI/bge-large-en-v1.5.
+2026-04-30 01:19:34,836 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:36,263 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-large-en-v1.5/d4aa6901d3a41ba39fb536a557fa166f842b0e09/config_sentence_transformers.json "HTTP/1.1 200 OK"
+2026-04-30 01:19:36,771 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:37,042 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-large-en-v1.5/d4aa6901d3a41ba39fb536a557fa166f842b0e09/README.md "HTTP/1.1 200 OK"
+2026-04-30 01:19:37,507 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:37,895 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-large-en-v1.5/d4aa6901d3a41ba39fb536a557fa166f842b0e09/modules.json "HTTP/1.1 200 OK"
+2026-04-30 01:19:38,395 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/sentence_bert_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:38,659 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-large-en-v1.5/d4aa6901d3a41ba39fb536a557fa166f842b0e09/sentence_bert_config.json "HTTP/1.1 200 OK"
+2026-04-30 01:19:39,097 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/adapter_config.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:39,707 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:39,948 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-large-en-v1.5/d4aa6901d3a41ba39fb536a557fa166f842b0e09/config.json "HTTP/1.1 200 OK"
+Loading weights:   0%|          | 0/391 [00:00<?, ?it/s]Loading weights: 100%|██████████| 391/391 [00:00<00:00, 10494.35it/s]
+2026-04-30 01:19:41,071 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/processor_config.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:41,934 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:42,451 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/video_preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:42,966 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:43,462 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:43,740 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-large-en-v1.5/d4aa6901d3a41ba39fb536a557fa166f842b0e09/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-04-30 01:19:44,193 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:44,423 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-large-en-v1.5/d4aa6901d3a41ba39fb536a557fa166f842b0e09/config.json "HTTP/1.1 200 OK"
+2026-04-30 01:19:44,785 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:44,978 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-large-en-v1.5/d4aa6901d3a41ba39fb536a557fa166f842b0e09/config.json "HTTP/1.1 200 OK"
+2026-04-30 01:19:45,462 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:45,778 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-large-en-v1.5/d4aa6901d3a41ba39fb536a557fa166f842b0e09/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-04-30 01:19:46,434 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-large-en-v1.5/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:46,994 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-large-en-v1.5/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-04-30 01:19:47,664 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-large-en-v1.5/resolve/main/1_Pooling/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:48,070 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-large-en-v1.5/d4aa6901d3a41ba39fb536a557fa166f842b0e09/1_Pooling%2Fconfig.json "HTTP/1.1 200 OK"
+2026-04-30 01:19:48,673 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-large-en-v1.5 "HTTP/1.1 200 OK"
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  1.38it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  1.38it/s]
+2026-04-30 01:19:50,963 | INFO     | app.rag.retriever | BM25 index loaded: 20 documents
+2026-04-30 01:19:50,967 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-04-30 01:19:50,967 | INFO     | app.rag.reranker | Loading reranker model: BAAI/bge-reranker-v2-m3
+2026-04-30 01:19:50,968 | INFO     | sentence_transformers.base.model | No device provided, using mps
+2026-04-30 01:19:51,558 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/modules.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:51,562 | INFO     | sentence_transformers.base.model | No modules.json found for BAAI/bge-reranker-v2-m3, initializing a new CrossEncoder model.
+2026-04-30 01:19:52,145 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-reranker-v2-m3 "HTTP/1.1 200 OK"
+2026-04-30 01:19:52,717 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:53,097 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-reranker-v2-m3/953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e/config.json "HTTP/1.1 200 OK"
+2026-04-30 01:19:54,279 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/adapter_config.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:54,876 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:55,192 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-reranker-v2-m3/953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e/config.json "HTTP/1.1 200 OK"
+Loading weights:   0%|          | 0/393 [00:00<?, ?it/s]Loading weights: 100%|██████████| 393/393 [00:00<00:00, 10045.72it/s]
+2026-04-30 01:19:55,667 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/processor_config.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:56,138 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:57,242 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/video_preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:57,808 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/preprocessor_config.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:19:58,483 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:58,914 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-reranker-v2-m3/953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-04-30 01:19:59,545 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:19:59,969 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-reranker-v2-m3/953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e/config.json "HTTP/1.1 200 OK"
+2026-04-30 01:20:00,598 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:20:01,038 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-reranker-v2-m3/953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e/config.json "HTTP/1.1 200 OK"
+2026-04-30 01:20:02,808 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/BAAI/bge-reranker-v2-m3/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:20:03,380 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/BAAI/bge-reranker-v2-m3/953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-04-30 01:20:04,048 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-reranker-v2-m3/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-04-30 01:20:04,651 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-reranker-v2-m3/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-04-30 01:20:05,920 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/BAAI/bge-reranker-v2-m3 "HTTP/1.1 200 OK"
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  6.65it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  6.65it/s]
+INFO:     127.0.0.1:55699 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 01:28:22,910 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 01:28:27,846 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: Apple stock news 2025
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 01:28:28,042 | INFO     | primp | response: https://www.bing.com/search?q=Apple+stock+news+2025 302
+2026-04-30 01:28:28,043 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search?q=Apple+stock+news+2025 return None. params={'q': 'Apple stock news 2025'} content=None data=None
+2026-04-30 01:28:28,043 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search?q=Apple+stock+news+2025 return None. params={'q': 'Apple stock news 2025'} content=None data=None
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.42it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.42it/s]
+2026-04-30 01:28:28,276 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: could not receive data from server: Connection refused
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  9.63it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  9.60it/s]
+2026-04-30 01:28:39,851 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=AAPL attempt=1 latency=2511ms
+INFO:     127.0.0.1:55910 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 01:30:12,595 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 01:30:16,201 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: semiconductor ETF performance 2025 recent news
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 01:30:16,412 | INFO     | primp | response: https://www.bing.com/search?q=semiconductor+ETF+performance+2025+recent+news 302
+2026-04-30 01:30:16,413 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search?q=semiconductor+ETF+performance+2025+recent+news return None. params={'q': 'semiconductor ETF performance 2025 recent news'} content=None data=None
+2026-04-30 01:30:16,413 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search?q=semiconductor+ETF+performance+2025+recent+news return None. params={'q': 'semiconductor ETF performance 2025 recent news'} content=None data=None
+2026-04-30 01:30:20,999 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=SMH attempt=1 latency=2744ms
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 10.17it/s]
+2026-04-30 01:30:21,108 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: could not receive data from server: Connection refused
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 13.07it/s]
+2026-04-30 01:30:21,407 | INFO     | app.models.finbert | Loading FinBERT from: ProsusAI/finbert
+2026-04-30 01:30:33,763 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/ProsusAI/finbert/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:30:34,365 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/ProsusAI/finbert/4556d13015211d73dccd3fdd39d39232506f3e43/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-04-30 01:30:35,144 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/ProsusAI/finbert/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-04-30 01:30:36,170 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/ProsusAI/finbert/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+/Users/leo/code/EZInvest/.venv/lib/python3.11/site-packages/transformers/models/bert/tokenization_bert.py:104: DeprecationWarning: Deprecated in 0.9.0: WordPiece.__init__ will not create from files anymore, try `WordPiece.from_file` instead
+  self._tokenizer = Tokenizer(WordPiece(self._vocab, unk_token=str(unk_token)))
+2026-04-30 01:30:37,702 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/ProsusAI/finbert/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-04-30 01:30:37,980 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/ProsusAI/finbert/4556d13015211d73dccd3fdd39d39232506f3e43/config.json "HTTP/1.1 200 OK"
+2026-04-30 01:30:38,548 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/ProsusAI/finbert/resolve/main/model.safetensors "HTTP/1.1 404 Not Found"
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 62923.95it/s]
+2026-04-30 01:30:38,909 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 01:30:39,796 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/ProsusAI/finbert "HTTP/1.1 200 OK"
+2026-04-30 01:30:40,766 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/ProsusAI/finbert/commits/main "HTTP/1.1 200 OK"
+2026-04-30 01:30:41,636 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/ProsusAI/finbert/discussions?p=0 "HTTP/1.1 200 OK"
+2026-04-30 01:30:43,825 | INFO     | httpx | HTTP Request: GET https://huggingface.co/api/models/ProsusAI/finbert/commits/refs%2Fpr%2F29 "HTTP/1.1 200 OK"
+2026-04-30 01:30:44,895 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/ProsusAI/finbert/resolve/refs%2Fpr%2F29/model.safetensors.index.json "HTTP/1.1 404 Not Found"
+2026-04-30 01:30:46,298 | INFO     | httpx | HTTP Request: HEAD https://huggingface.co/ProsusAI/finbert/resolve/refs%2Fpr%2F29/model.safetensors "HTTP/1.1 302 Found"
+INFO:     127.0.0.1:56031 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 01:31:37,836 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 01:31:41,941 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: 苹果公司 本周 新闻 2025
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 01:31:42,119 | INFO     | primp | response: https://www.bing.com/search?q=%E8%8B%B9%E6%9E%9C%E5%85%AC%E5%8F%B8+%E6%9C%AC%E5%91%A8+%E6%96%B0%E9%97%BB+2025 302
+2026-04-30 01:31:42,119 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search?q=%E8%8B%B9%E6%9E%9C%E5%85%AC%E5%8F%B8+%E6%9C%AC%E5%91%A8+%E6%96%B0%E9%97%BB+2025 return None. params={'q': '苹果公司 本周 新闻 2025'} content=None data=None
+2026-04-30 01:31:42,120 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search?q=%E8%8B%B9%E6%9E%9C%E5%85%AC%E5%8F%B8+%E6%9C%AC%E5%91%A8+%E6%96%B0%E9%97%BB+2025 return None. params={'q': '苹果公司 本周 新闻 2025'} content=None data=None
+2026-04-30 01:31:44,119 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=AAPL attempt=1 latency=889ms
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.13it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.12it/s]
+2026-04-30 01:31:44,604 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: could not receive data from server: Connection refused
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.41it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.41it/s]
+2026-04-30 01:31:45,494 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:56278 - "OPTIONS /api/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56278 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 01:33:12,010 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 01:33:14,066 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: San Disk 最新消息 2025
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 01:33:14,242 | INFO     | primp | response: https://www.bing.com/search?q=San+Disk+%E6%9C%80%E6%96%B0%E6%B6%88%E6%81%AF+2025 302
+2026-04-30 01:33:14,243 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search?q=San+Disk+%E6%9C%80%E6%96%B0%E6%B6%88%E6%81%AF+2025 return None. params={'q': 'San Disk 最新消息 2025'} content=None data=None
+2026-04-30 01:33:14,243 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search?q=San+Disk+%E6%9C%80%E6%96%B0%E6%B6%88%E6%81%AF+2025 return None. params={'q': 'San Disk 最新消息 2025'} content=None data=None
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.55it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.55it/s]
+2026-04-30 01:33:14,646 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: could not receive data from server: Connection refused
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.25it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.25it/s]
+2026-04-30 01:33:20,346 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=WDC attempt=1 latency=1049ms
+2026-04-30 01:33:20,480 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:58081 - "OPTIONS /api/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58081 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 01:45:06,970 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 01:45:10,785 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: SanDisk 热门 新闻 2025 股价 上涨 原因
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 01:45:10,983 | INFO     | primp | response: https://www.bing.com/search?q=SanDisk+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025+%E8%82%A1%E4%BB%B7+%E4%B8%8A%E6%B6%A8+%E5%8E%9F%E5%9B%A0 302
+2026-04-30 01:45:10,984 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search?q=SanDisk+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025+%E8%82%A1%E4%BB%B7+%E4%B8%8A%E6%B6%A8+%E5%8E%9F%E5%9B%A0 return None. params={'q': 'SanDisk 热门 新闻 2025 股价 上涨 原因'} content=None data=None
+2026-04-30 01:45:10,984 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search?q=SanDisk+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025+%E8%82%A1%E4%BB%B7+%E4%B8%8A%E6%B6%A8+%E5%8E%9F%E5%9B%A0 return None. params={'q': 'SanDisk 热门 新闻 2025 股价 上涨 原因'} content=None data=None
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.55it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.55it/s]
+2026-04-30 01:45:11,403 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.87it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.87it/s]
+2026-04-30 01:45:22,833 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=WDC attempt=1 latency=4606ms
+2026-04-30 01:45:23,040 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60086 - "OPTIONS /api/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60086 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 01:58:45,187 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 01:58:47,775 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: SanDisk 热门 新闻 2025
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 01:58:47,973 | INFO     | primp | response: https://www.bing.com/search?q=SanDisk+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025 302
+2026-04-30 01:58:47,974 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search?q=SanDisk+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025 return None. params={'q': 'SanDisk 热门 新闻 2025'} content=None data=None
+2026-04-30 01:58:47,974 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search?q=SanDisk+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025 return None. params={'q': 'SanDisk 热门 新闻 2025'} content=None data=None
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.06it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  2.06it/s]
+2026-04-30 01:58:48,488 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.78it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.78it/s]
+2026-04-30 01:58:54,643 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=WDC attempt=1 latency=2767ms
+2026-04-30 01:58:54,865 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60088 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 01:59:18,901 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 01:59:26,430 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=SNDK attempt=1 latency=1176ms
+2026-04-30 01:59:26,433 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: SanDisk SNDK Nasdaq 100 index component 2025
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 01:59:26,612 | INFO     | primp | response: https://www.bing.com/search?q=SanDisk+SNDK+Nasdaq+100+index+component+2025 302
+2026-04-30 01:59:26,613 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search?q=SanDisk+SNDK+Nasdaq+100+index+component+2025 return None. params={'q': 'SanDisk SNDK Nasdaq 100 index component 2025'} content=None data=None
+2026-04-30 01:59:26,613 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search?q=SanDisk+SNDK+Nasdaq+100+index+component+2025 return None. params={'q': 'SanDisk SNDK Nasdaq 100 index component 2025'} content=None data=None
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.91it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.91it/s]
+2026-04-30 01:59:26,826 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: could not receive data from server: Connection refused
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 16.20it/s]
+2026-04-30 01:59:27,200 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60395 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 02:02:37,244 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 02:02:41,022 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: SanDisk 闪迪 热门 新闻 2025
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 02:02:41,211 | INFO     | primp | response: https://www.bing.com/search?q=SanDisk+%E9%97%AA%E8%BF%AA+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025 302
+2026-04-30 02:02:41,211 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search?q=SanDisk+%E9%97%AA%E8%BF%AA+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025 return None. params={'q': 'SanDisk 闪迪 热门 新闻 2025'} content=None data=None
+2026-04-30 02:02:41,211 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search?q=SanDisk+%E9%97%AA%E8%BF%AA+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025 return None. params={'q': 'SanDisk 闪迪 热门 新闻 2025'} content=None data=None
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  6.58it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  6.57it/s]
+2026-04-30 02:02:41,373 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: could not receive data from server: Connection refused
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 28.74it/s]
+2026-04-30 02:02:48,221 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=WDC attempt=1 latency=2424ms
+2026-04-30 02:02:48,381 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:61474 - "OPTIONS /api/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61474 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 02:08:52,967 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 02:08:56,454 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: SanDisk 闪迪 热门 新闻 2025
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 02:08:56,531 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search ConnectError: ('error sending request for url (https://www.bing.com/search?q=SanDisk+%E9%97%AA%E8%BF%AA+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025)', 'https://www.bing.com/search?q=SanDisk+%E9%97%AA%E8%BF%AA+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025')
+2026-04-30 02:08:56,531 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search ConnectError: ('error sending request for url (https://www.bing.com/search?q=SanDisk+%E9%97%AA%E8%BF%AA+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025)', 'https://www.bing.com/search?q=SanDisk+%E9%97%AA%E8%BF%AA+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025')
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  5.02it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  5.02it/s]
+2026-04-30 02:08:56,737 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: could not receive data from server: Connection refused
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 16.85it/s]
+2026-04-30 02:09:00,788 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=WDC attempt=1 latency=1711ms
+2026-04-30 02:09:00,906 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:61476 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 02:09:34,298 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 13.65it/s]
+2026-04-30 02:09:36,917 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: could not receive data from server: Connection refused
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 27.64it/s]
+2026-04-30 02:09:39,026 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=SNDK attempt=1 latency=597ms
+2026-04-30 02:09:39,028 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: SanDisk SNDK latest news 2025
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 02:09:39,219 | INFO     | primp | response: https://www.bing.com/search?q=SanDisk+SNDK+latest+news+2025 302
+2026-04-30 02:09:39,219 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search?q=SanDisk+SNDK+latest+news+2025 return None. params={'q': 'SanDisk SNDK latest news 2025'} content=None data=None
+2026-04-30 02:09:39,219 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search?q=SanDisk+SNDK+latest+news+2025 return None. params={'q': 'SanDisk SNDK latest news 2025'} content=None data=None
+2026-04-30 02:09:39,299 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:63409 - "OPTIONS /api/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63409 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 02:24:31,590 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 02:24:35,417 | INFO     | app.agent.tools.web_scraper | Web scraper initiated for query: SanDisk 闪迪 热门 新闻 2025
+/Users/leo/code/EZInvest/backend/app/agent/tools/web_scraper.py:66: RuntimeWarning: This package (`duckduckgo_search`) has been renamed to `ddgs`! Use `pip install ddgs` instead.
+  with DDGS() as ddgs:
+2026-04-30 02:24:35,626 | INFO     | primp | response: https://www.bing.com/search?q=SanDisk+%E9%97%AA%E8%BF%AA+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025 302
+2026-04-30 02:24:35,627 | INFO     | duckduckgo_search.DDGS | Error to search using bing backend: https://www.bing.com/search?q=SanDisk+%E9%97%AA%E8%BF%AA+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025 return None. params={'q': 'SanDisk 闪迪 热门 新闻 2025'} content=None data=None
+2026-04-30 02:24:35,627 | ERROR    | app.agent.tools.web_scraper | DDGS search failed: https://www.bing.com/search?q=SanDisk+%E9%97%AA%E8%BF%AA+%E7%83%AD%E9%97%A8+%E6%96%B0%E9%97%BB+2025 return None. params={'q': 'SanDisk 闪迪 热门 新闻 2025'} content=None data=None
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.02it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.02it/s]
+2026-04-30 02:24:35,891 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: could not receive data from server: Connection refused
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.48it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  4.48it/s]
+2026-04-30 02:24:41,811 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=WDC attempt=1 latency=3218ms
+2026-04-30 02:24:42,083 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:63411 - "POST /api/chat/stream HTTP/1.1" 200 OK
+2026-04-30 02:25:04,533 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-30 02:25:08,703 | INFO     | app.agent.tools.market_data | yfinance fetch OK: ticker=SNDK attempt=1 latency=622ms
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 13.73it/s]
+2026-04-30 02:25:08,786 | ERROR    | app.rag.pgvector_store | Failed to search pgvector: Failed to create vector extension: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: 5432, hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: could not receive data from server: Connection refused
+- host: 'localhost', port: 5432, hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: could not receive data from server: Connection refused
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00, 23.69it/s]
+2026-04-30 02:25:09,103 | INFO     | httpx | HTTP Request: POST https://api.deepseek.com/v1/chat/completions "HTTP/1.1 200 OK"

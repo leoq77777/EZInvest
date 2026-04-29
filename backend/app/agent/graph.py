@@ -1,252 +1,156 @@
-"""Plan-Execute-Summarize agent pipeline.
-
-Three-phase architecture that replaces the ReAct loop:
-  1. Plan   — LLM decomposes the user query into 2-5 tool-call steps (1 LLM call)
-  2. Execute — Tools are called directly with no LLM involvement (0 LLM calls)
-  3. Summarize — LLM synthesizes all results into a report (1 LLM call, streamed)
-
-The LLM client is lazily initialized so tests can mock it without a running server.
-"""
-
 import json
 import logging
-import re
-import time
-from typing import AsyncGenerator
+import asyncio
+from typing import AsyncGenerator, List, Dict, Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
-
-from app.agent.prompts import SYSTEM_PROMPT, PLAN_PROMPT, SUMMARIZE_PROMPT
-from app.agent.tools import (
-    retriever_tool,
-    sentiment_tool,
-    calculator_tool,
-    market_data_tool,
-)
+from app.agent.llm import get_llm
+from app.agent.tools.market_data import market_data_tool
+from app.agent.tools.web_scraper import web_scraper_tool
+from app.agent.tools.retriever import retriever_tool
+from app.agent.tools.calculator import financial_calculator_tool
+from app.agent.tools.sentiment import sentiment_analyzer_tool
+from app.agent.prompts import SYSTEM_PROMPT, REASONER_PROMPT, SUMMARIZE_PROMPT
 
 logger = logging.getLogger(__name__)
 
-def _get_tool_map() -> dict:
-    """Build tool map at call time so tests can patch individual tools."""
-    return {
-        "retriever": retriever_tool,
-        "sentiment_analyzer": sentiment_tool,
-        "calculator": calculator_tool,
-        "market_data": market_data_tool,
-    }
+# Tool mapping for easier execution
+TOOLS = {
+    "market_data": market_data_tool,
+    "web_scraper": web_scraper_tool,
+    "retriever": retriever_tool,
+    "calculator": financial_calculator_tool,
+    "sentiment_analyzer": sentiment_analyzer_tool,
+}
 
-_llm = None
-
-
-def get_llm():
-    """Lazy-init the LLM client (no tool binding — used for plan & summarize).
-
-    Connection flow:
-        EZInvest backend
-              │  OpenAI-compatible HTTP API
-              ▼
-        Local Model Server (Ollama / vLLM / llama.cpp)
-    """
-    global _llm
-    if _llm is None:
-        from langchain_openai import ChatOpenAI
-        from app.config import get_settings
-
-        settings = get_settings()
-        _llm = ChatOpenAI(
-            base_url=settings.llm_base_url,
-            api_key=settings.llm_api_key,
-            model=settings.llm_model_path,
-            temperature=0.1,
-            max_tokens=4096,
-        )
-        logger.info(
-            "LLM client initialized: base_url=%s model=%s",
-            settings.llm_base_url,
-            settings.llm_model_path,
-        )
-    return _llm
-
-
-# ---------------------------------------------------------------------------
-# Phase 1 helpers
-# ---------------------------------------------------------------------------
-
-def _parse_plan(raw: str) -> list:
-    """Best-effort extraction of a JSON step array from LLM output."""
-    text = raw.strip()
-
+async def execute_tool(name: str, args: Dict[str, Any]) -> str:
+    """Execute a tool by name with arguments."""
+    if name not in TOOLS:
+        return f"Error: Tool '{name}' not found."
+    
+    tool_func = TOOLS[name]
     try:
-        plan = json.loads(text)
-        if isinstance(plan, list):
-            return plan
-    except json.JSONDecodeError:
-        pass
-
-    m = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", text, re.DOTALL)
-    if m:
-        try:
-            plan = json.loads(m.group(1))
-            if isinstance(plan, list):
-                return plan
-        except json.JSONDecodeError:
-            pass
-
-    start = text.find("[")
-    end = text.rfind("]")
-    if start != -1 and end != -1 and end > start:
-        try:
-            plan = json.loads(text[start : end + 1])
-            if isinstance(plan, list):
-                return plan
-        except json.JSONDecodeError:
-            pass
-
-    return []
-
-
-# ---------------------------------------------------------------------------
-# Phase 2 helpers
-# ---------------------------------------------------------------------------
-
-async def _execute_tool(tool_name: str, tool_args: dict) -> str:
-    """Dispatch a single tool call by name. Returns the string result."""
-    tool_fn = _get_tool_map().get(tool_name)
-    if tool_fn is None:
-        return json.dumps({"error": f"Unknown tool: {tool_name}"})
-
-    try:
-        result = await tool_fn.ainvoke(tool_args)
-        return str(result)
+        if asyncio.iscoroutinefunction(tool_func):
+            return await tool_func(**args)
+        else:
+            # Run sync tools in a thread pool to avoid blocking
+            return await asyncio.to_thread(tool_func, **args)
     except Exception as e:
-        logger.error("Tool %s failed: %s", tool_name, e)
-        return json.dumps({"error": f"{tool_name} failed: {e}"})
-
-
-# ---------------------------------------------------------------------------
-# Main streaming pipeline
-# ---------------------------------------------------------------------------
+        logger.error(f"Error executing tool {name}: {e}")
+        return f"Error executing tool: {str(e)}"
 
 async def run_agent_stream(
     message: str, session_id: str
 ) -> AsyncGenerator[dict, None]:
-    """Stream SSE events through Plan -> Execute -> Summarize."""
+    """Stream SSE events through a Cyclic ReAct (Reasoning & Acting) loop."""
     llm = get_llm()
-
-    # ── Phase 1: Plan ──────────────────────────────────────────────────
-    plan_prompt = PLAN_PROMPT.format(query=message)
-    plan_response = await llm.ainvoke([
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=plan_prompt),
-    ])
-
-    steps = _parse_plan(plan_response.content)
-
-    if not steps:
-        steps = [
-            {
-                "id": "step_1",
-                "description": message,
-                "tool": "retriever",
-                "tool_args": {"query": message, "top_k": 5},
-            }
-        ]
-
-    for i, step in enumerate(steps):
-        step.setdefault("id", f"step_{i + 1}")
-        step.setdefault("status", "pending")
-        step.setdefault("tool_args", {})
-
+    observations = []
+    max_iterations = 8
+    
+    # ── Phase 0: Initial Thought ──────────────────────────────────────────
     yield {
-        "type": "plan",
-        "data": {
-            "steps": [
-                {
-                    "id": s["id"],
-                    "description": s.get("description", ""),
-                    "tool": s.get("tool", ""),
-                }
-                for s in steps
-            ]
-        },
+        "type": "thought",
+        "data": {"content": "正在启动投研智能体，准备进行多轮深度分析..."}
     }
 
-    # ── Phase 2: Execute ───────────────────────────────────────────────
-    step_results = []
-
-    for step in steps:
-        step_id = step["id"]
-        tool_name = step.get("tool", "retriever")
-        tool_args = step.get("tool_args", {})
-
-        yield {
-            "type": "step_update",
-            "data": {"step_id": step_id, "status": "running"},
-        }
-
-        t0 = time.perf_counter()
-        try:
-            result = await _execute_tool(tool_name, tool_args)
-            elapsed_ms = (time.perf_counter() - t0) * 1000
-            status = "done"
-        except Exception as e:
-            result = str(e)
-            elapsed_ms = (time.perf_counter() - t0) * 1000
-            status = "error"
-
-        step_results.append(
-            {
-                "step_id": step_id,
-                "tool": tool_name,
-                "description": step.get("description", ""),
-                "output": result,
-            }
+    for i in range(max_iterations):
+        # ── Phase 1: Reasoning ─────────────────────────────────────────────
+        obs_summary = json.dumps(observations, ensure_ascii=False)
+        reasoning_prompt = REASONER_PROMPT.format(
+            query=message, 
+            observations=obs_summary
         )
+        
+        logger.info(f"Iteration {i+1}: Reasoning...")
+        
+        try:
+            response = await llm.ainvoke([
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(content=reasoning_prompt),
+            ])
+            
+            # Remove potential markdown fences
+            content = response.content.replace("```json", "").replace("```", "").strip()
+            data = json.loads(content)
+        except Exception as e:
+            logger.error(f"Reasoning parse error: {e}. Content: {response.content}")
+            yield {
+                "type": "thought",
+                "data": {"content": "推理过程解析异常，正在尝试自我修正..."}
+            }
+            # Fallback to simple summary if reasoning fails
+            data = {"type": "finish", "thought": "Something went wrong in reasoning, finalizing now."}
 
-        preview = result[:200] + "..." if len(result) > 200 else result
-        yield {
-            "type": "step_update",
-            "data": {
-                "step_id": step_id,
-                "status": status,
-                "result": preview,
-                "latency_ms": round(elapsed_ms, 1),
-            },
-        }
+        # Handle Clarification
+        if data.get("type") == "clarification":
+            yield {
+                "type": "token",
+                "data": {"content": f"⚠️ **需进一步确认**：\n\n{data.get('message')}"}
+            }
+            return
 
-    # ── Phase 3: Summarize ─────────────────────────────────────────────
-    yield {"type": "summarizing", "data": {}}
+        # Handle Finish
+        if data.get("type") == "finish":
+            yield {
+                "type": "thought",
+                "data": {"content": "所有调研已完成，正在为您生成最终投研报告..."}
+            }
+            
+            final_prompt = SUMMARIZE_PROMPT.format(
+                query=message,
+                step_results=obs_summary
+            )
+            
+            summary_response = await llm.ainvoke([
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(content=final_prompt),
+            ])
+            
+            # Stream the summary as tokens
+            yield {
+                "type": "token",
+                "data": {"content": summary_response.content}
+            }
+            return
 
-    results_text = "\n".join(
-        f"### Step: {sr['description']}\nTool: {sr['tool']}\nResult:\n{sr['output']}\n"
-        for sr in step_results
-    )
+        # Handle Action
+        if data.get("type") == "action":
+            tool_name = data.get("tool")
+            tool_args = data.get("tool_args", {})
+            thought = data.get("thought", "执行下一步调研...")
+            
+            yield {
+                "type": "thought",
+                "data": {"content": f"第 {i+1} 步：{thought}"}
+            }
+            
+            # Emit a mock plan update for the UI to show current progress
+            yield {
+                "type": "thought", 
+                "data": {"content": f"正在使用 {tool_name} 获取数据..."}
+            }
+            
+            result = await execute_tool(tool_name, tool_args)
+            observations.append({
+                "step": i + 1,
+                "tool": tool_name,
+                "thought": thought,
+                "observation": result
+            })
+            
+            # Optionally yield a small update
+            logger.info(f"Iteration {i+1}: Action {tool_name} completed.")
 
-    summarize_prompt = SUMMARIZE_PROMPT.format(
-        query=message,
-        step_results=results_text,
-    )
-
-    async for chunk in llm.astream([
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=summarize_prompt),
-    ]):
-        if chunk.content:
-            yield {"type": "token", "data": chunk.content}
-
+    # Final Fallback if max iterations reached
+    yield {
+        "type": "token",
+        "data": {"content": "由于调研步骤较多，已达到最大循环次数。以上是目前搜集到的核心信息。"}
+    }
 
 async def run_agent(message: str, session_id: str) -> dict:
-    """Non-streaming convenience wrapper — runs the full pipeline."""
-    tokens = []
-    tool_calls = []
-
+    """Sync wrapper for run_agent_stream."""
+    full_content = ""
     async for event in run_agent_stream(message, session_id):
         if event["type"] == "token":
-            tokens.append(event["data"])
-        elif event["type"] == "step_update" and event["data"].get("status") == "done":
-            tool_calls.append({
-                "tool": event["data"].get("tool", ""),
-                "status": "done",
-            })
-
-    return {"answer": "".join(tokens), "tool_calls": tool_calls}
+            full_content += event["data"]["content"]
+    return {"content": full_content}

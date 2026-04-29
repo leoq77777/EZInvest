@@ -35,6 +35,7 @@ export function ChatWindow() {
     addToolCall,
     updateToolCall,
     setPlan,
+    setThought,
     updateStep,
     setSummarizing,
     finalizeMessage,
@@ -63,6 +64,11 @@ export function ChatWindow() {
     try {
       await streamChat(trimmed, sessionId, (event: StreamEvent) => {
         switch (event.type) {
+          case "thought": {
+            const thoughtData = event.data as { content: string };
+            setThought(msgId, thoughtData.content);
+            break;
+          }
           case "plan": {
             const planData = event.data as PlanEventData;
             setPlan(msgId, toPlanSteps(planData));

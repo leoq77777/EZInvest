@@ -20,6 +20,7 @@ export interface StepUpdateData {
 }
 
 export type StreamEventType =
+  | "thought"
   | "plan"
   | "step_update"
   | "summarizing"
@@ -33,7 +34,8 @@ export interface StreamEvent {
   data: unknown;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+// Use the environment variable if set, otherwise default to local backend for development
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export async function streamChat(
   message: string,

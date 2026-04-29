@@ -73,26 +73,46 @@ def market_data_tool(ticker: str, period: str = "1mo") -> str:
     try:
         data = _fetch_with_retry(ticker, period)
     except MarketDataError as e:
-        return json.dumps({"error": str(e), "ticker": ticker}, ensure_ascii=False)
+        return json.dumps({
+            "error": f"Ticker '{ticker}' not found or no longer active. Note: If the company was acquired (like SanDisk), please check its parent company's ticker.",
+            "ticker": ticker,
+            "is_defunct_possible": True
+        }, ensure_ascii=False)
 
     hist = data["hist"]
     info = data["info"]
 
     latest = hist.iloc[-1]
+
+    # Prefer real-time price from info over historical close for accuracy
+    real_time_price = (
+        info.get("currentPrice")
+        or info.get("regularMarketPrice")
+        or float(latest["Close"])
+    )
+    previous_close = info.get("previousClose")
+
     price_data = {
         "ticker": ticker.upper(),
-        "current_price": round(float(latest["Close"]), 2),
-        "open": round(float(latest["Open"]), 2),
-        "high": round(float(latest["High"]), 2),
-        "low": round(float(latest["Low"]), 2),
-        "volume": int(latest["Volume"]),
+        "current_price": round(float(real_time_price), 2),
+        "previous_close": round(float(previous_close), 2) if previous_close else None,
+        "open": round(float(info.get("regularMarketOpen", latest["Open"])), 2),
+        "high": round(float(info.get("regularMarketDayHigh", latest["High"])), 2),
+        "low": round(float(info.get("regularMarketDayLow", latest["Low"])), 2),
+        "volume": int(info.get("regularMarketVolume", latest["Volume"])),
         "date": str(hist.index[-1].date()),
         "fetch_latency_ms": round(data["latency_ms"], 1),
     }
 
+    # Daily change based on real-time price vs previous close
+    if previous_close and real_time_price:
+        daily_change_pct = ((float(real_time_price) - float(previous_close)) / float(previous_close)) * 100
+        price_data["daily_change_pct"] = round(daily_change_pct, 2)
+
+    # Period change from historical data
     if len(hist) > 1:
         first_close = float(hist.iloc[0]["Close"])
-        last_close = float(hist.iloc[-1]["Close"])
+        last_close = float(real_time_price)
         change_pct = ((last_close - first_close) / first_close) * 100
         price_data["period"] = period
         price_data["period_change_pct"] = round(change_pct, 2)
@@ -100,6 +120,7 @@ def market_data_tool(ticker: str, period: str = "1mo") -> str:
     for key in [
         "marketCap", "trailingPE", "forwardPE",
         "dividendYield", "fiftyTwoWeekHigh", "fiftyTwoWeekLow",
+        "shortName", "longName",
     ]:
         if key in info and info[key] is not None:
             price_data[key] = info[key]
