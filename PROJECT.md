@@ -269,4 +269,4 @@ EZInvest/
 
 ## 简历 / 投递一页纸
 
-投递与面试话术、中英简历 bullet 见 [PROJECT_RESUME.zh.md](./PROJECT_RESUME.zh.md)。
+投递与面试话术、**全项目**总结与中英简历 bullet 见 [PROJECT_RESUME.zh.md](./PROJECT_RESUME.zh.md)。

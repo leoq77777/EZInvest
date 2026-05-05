@@ -1,52 +1,82 @@
-# EZInvest — 推送说明 · 简历要点
+# EZInvest — 全项目总结 · 简历要点
 
-面向「要写进简历 / 作品集」场景的**一页纸总结**。技术细节见仓库根目录 [PROJECT.md](./PROJECT.md)。
-
----
-
-## 一、最近一次功能摘要（可追溯）
-
-以下为近期合并进主线的代表性能力（含「显式保存再落库」等交互变更）：
-
-- **会话落库模型**：`/api/chat/stream` 默认 `auto_persist_turn=false`，对话与报告不再随流自动写入数据库；用户在侧栏报告非空时点击 **保存**，调用 `POST /api/conversations/{id}/commit-turn` 单笔事务写入用户消息、助手消息、合并研报，并可选写入长期记忆。
-- **会话标题与报告对齐**：保存时用报告正文截取 + `derive_conversation_title()`（标的/代码推断与 `crud._title_from_message` 一致）**覆盖更新** `Conversation.title`，侧栏会话名与报告中的金融标的一致。
-- **前端**：面板文案「实时投研报告」、`LiveReportPanel` 条件展示「保存」、`streamChat` 显式 `autoPersistTurn: false`、`commitConversationTurn` API 封装、流结束后 `pendingTurnSave` 草稿态与刷新 hydrate。
-- **兼容**：自动化或旧客户端若需流式过程自动持久化，请求体仍需传 **`"auto_persist_turn": true`**。
+面向「要写进简历 / 作品集」的**一页纸**：覆盖**整条产品线**（Agent、检索、工具链、前端、持久化与运行保障），不单指某次迭代。深挖实现见 [PROJECT.md](./PROJECT.md)。
 
 ---
 
-## 二、项目在简历里的一句话pitch（可选）
+## 一、项目是做什么的
 
-端到端 AI 金融投研助手：**ReAct 多轮推理 + 混合 RAG（稠密 / 稀疏 / 动态向量库）+ SSE 流式 UI**，配套 PostgreSQL 会话记忆、研报面板与可控落库——适合强调 **Agent、检索工程、全栈与生产化意识**。
+**EZInvest** 是一套端到端的 **AI 金融投研助手**：用户用自然语言提问，系统在 **ReAct 式多轮推理** 中调度多种工具（行情、混合检索、联网抓取与入库、计算器、舆情等），把观察结果累积后再生成 **结构化研报（Markdown）**；前端通过 **SSE** 实时展示思考过程、执行计划、工具状态、正文 token 与侧栏研报。
 
----
-
-## 三、中文简历 Bullet Points（直接粘贴后按需删改）
-
-- 独立设计并实现 **端到端 AI 金融投研产品**：FastAPI 异步后端 + Next.js/React 前端，**SSE** 推送思考链、工具状态、令牌与研报事件，前端 **Zustand** 驱动的流式会话与研报面板。
-- 实现基于 **LangChain Core** 的自研 **ReAct 循环**：推理—工具调度—观察回流，集成行情（yfinance）、混合检索（FAISS + BM25）、网页抓取 pipeline、可选 **FinBERT** 情感分类等工具，并通过配置切换 **DeepSeek / OpenAI / Ollama** 等推理后端。
-- 搭建 **三级混合检索链路**：离线向量（FAISS）与稀疏检索（BM25）、**PostgreSQL pgvector** 动态入库**，**RRF 融合 + Cross-Encoder 重排序**，显著提升金融长文档场景的召回精度与可读引用。
-- 负责 **会话与记忆持久化**：多表模型、Bootstrap/会话列表、`commit-turn` 显式入库、标题从研报正文 **确定性推导**，并接入后台会话摘要钩子；补齐 **Vitest / Pytest**，覆盖 API 与用户态关键路径。
-- 关注 **可靠性**：SSE 超时与空闲保活策略、并行工具阶段的 async 语义（避免不当 cancel）、数据库就绪门控与环境变量驱动的诊断/会话库开关，降低联调与环境差异成本。
+与「单次问答 + 单向 RAG」不同，本产品强调：**循环纠错、实体/标歧义消解、动态知识入库与再检索**，以及工程上的 **异步全链路、降级与可观测性**。
 
 ---
 
-## 四、English resume bullets（optional）
+## 二、系统架构（自顶向下）
 
-- Built an **end-to-end AI equity research assistant** with an async **FastAPI** backend and **Next.js/React** UI, streaming multi-phase agent output (**SSE**) including reasoning, tool progress, tokens, and a live Markdown research report pane.
-- Implemented a **ReAct-style agent loop** (reason → act → observe) with modular tools (**market data, hybrid retrieval, scraping, sentiment, calculator**), grounding/entity safeguards, and pluggable LLM backends.
-- Delivered **hybrid retrieval + reranking**: FAISS dense search, BM25 sparse search, pgvector-backed dynamic corpora, **RRF fusion**, and cross-encoder **reranking** for production-grade RAG quality.
-- Designed **PostgreSQL-backed persistence**: explicit “save-to-DB” commit for each turn aligned with merged report updates, deterministic **conversation titles** derived from report text, background session summarization hooks, and automated **pytest/vitest** coverage for critical APIs and client state.
+| 层级 | 内容 |
+|:-----|:-----|
+| **前端** | Next.js 15、React 19、Tailwind 4；**Zustand** 管理会话与流式事件；Markdown / GFM 渲染消息与研报；支持计划进度、工具调用卡片、可选诊断 SSE、会话列表与「实时投研报告」面板。 |
+| **API** | FastAPI 异步：**/api/chat**（非流 + **SSE 流式**）、**/api/conversations**（Bootstrap、会话 CRUD、消息、研报、`commit-turn`）、**/api/memories**、**/api/profile_agent**；**/api/health** 对外部依赖探活。 |
+| **Agent** | **LangChain Core + 自研 ReAct 循环**（`graph.py`）：JSON 决策协议（行动 / 澄清 / 结束），异步生成器对流输出 `thought`、`plan`、`step_update`、`tool_call`、`token`、`report`、`done` 等事件；**LLM 工厂**统一 DeepSeek / OpenAI / Ollama 等。 |
+| **工具链** | `market_data`（yfinance，重试与多级价格兜底）、`retriever`（混合检索封装）、`web_scraper`（搜索→抓取→解析→分块→**pgvector 入库**）、`calculator`（确定性计算）、`sentiment`（FinBERT）。 |
+| **RAG** | **FAISS（HNSW）+ BM25 + pgvector** 三路检索 → **RRF 融合** → **Cross-Encoder 精排**；pgvector 不可用时降级双路；**Redis** 可缓存检索结果。 |
+| **数据与记忆** | **PostgreSQL**（会话、消息、`report_markdown`、可选用户画像/风格占位等）；分层 **memory_layers / turn_context** 组装提示词；可选 **长期 UserMemory**；后台 **session summarizer** 节流摘要其它会话。 |
+| **域名规则** | **entity_resolution**：重大公司行为（如拆分上市）等对工具参数与检索查询做纠偏；**derive_conversation_title** 用于会话命名与保存时与研报对齐。 |
+| **运行与交付** | **Docker Compose** 多 Profile（含本地/推理服务端场景）；`.env` / pydantic-settings 集中配置；**pytest**（Agent/API/Tools）、**Vitest**（前端 store 等）。 |
 
 ---
 
-## 五、面试时可展开的「证据链」（自行对照仓库）
+## 三、会话与落库交互（产品线的一部分）
 
-| 话题 | 可指到的位置 |
-|:-----|:-------------|
-| Agent 拓扑与事件 | `backend/app/agent/graph.py`，SSE：`backend/app/api/routes/chat.py` |
-| 混合检索 | `backend/app/rag/retriever.py`、`pgvector_store.py`、`reranker.py` |
-| 显式落库与标题 | `backend/app/api/routes/conversations.py`，`backend/app/services/chat_persist.py`，`backend/app/agent/entity_resolution.py` |
-| 前端流式与会话 UI | `frontend/src/components/ChatWindow.tsx`，`frontend/src/lib/api.ts` |
+默认流式 **`auto_persist_turn=false`**：一轮对话不落库直至用户在侧栏报告非空时点击 **保存**，由 **`POST .../commit-turn`** 单笔写入用户/助手消息、合并研报，并按报告正文 **覆盖推导会话标题**；自动化集成可传 **`auto_persist_turn: true`** 恢复「边流边写」行为。
+
+---
+
+## 四、简历一句话 Pitch（中英文可选）
+
+- **中文**：端到端 AI 投研产品：**ReAct Agent + 三路混合 RAG（FAISS / BM25 / pgvector）+ RRF 与 Cross-Encoder 重排 + SSE 流式全栈**，含行情/爬虫/记忆/健康检查与可配置 LLM。  
+- **English**: End-to-end **streaming AI equity research** stack: **ReAct agent**, **hybrid RAG with RRF + reranking**, **live tooling** (market data, scraper→vector DB, sentiment), and **production-minded** async APIs + persistence.
+
+---
+
+## 五、中文简历 Bullet Points（覆盖全项目，按需删减）
+
+1. 独立交付 **全栈 AI 金融投研应用**：**FastAPI 异步后端** + **Next.js 15 / React 19** 前端，基于 **SSE** 推送思考链、计划、步骤、工具调用、正文 token 与侧栏 **Markdown 研报**，**Zustand** 细粒度更新避免整页重绘。  
+2. 实现 **ReAct 循环 Agent**（`graph.py`）：多轮 **推理—行动—观察** 状态积累，JSON 决策驱动工具调度与可选 **clarification**；**AsyncGenerator** 对流输出事件，并与 **LangChain Core**、可切换的 **DeepSeek / OpenAI / Ollama** 等 LLM 后端集成。  
+3. 设计 **三路混合检索管线**：**FAISS（BGE 向量）+ BM25 + PostgreSQL pgvector（动态网页块）**，**RRF 融合去重** 与 **BGE Cross-Encoder 精排**；实现 **pgvector 故障降级**、**Redis 检索缓存** 与可配置超时/索引路径。  
+4. 落地 **联网投研数据闭环**：**DuckDuckGo 搜索 + httpx 并发抓取 + BeautifulSoup 清洗 + 滑动窗口分块**，写入 **DynamicVectorStore**，供后续 `retriever` 无感检索；与离线 SEC/财报索引协同。  
+5. 工程化 **行情与工具执行**：`yfinance` **多级价格兜底**（盘中价优先）、重试与超时；在 `execute_tool` 中对同步工具使用 **`asyncio.to_thread`**，避免阻塞事件循环；封装 **FinBERT** 金融情感与确定性 **calculator**。  
+6. 构建 **领域鲁棒性**：**SYSTEM/REASONER 提示词** 约束幻觉与过时标的；**entity_resolution** 对重大公司行为做工具层纠偏；市场工具失败时 **结构化错误** 引导再推理。  
+7. 负责 **数据与记忆层**：PostgreSQL **会话/消息/研报**、Bootstrap 与列表 API、**显式 commit-turn 落库**、**分层记忆注入**、可选 **UserMemory**、后台 **其它会话摘要** 节流任务；**Vitest + Pytest** 覆盖 API、Agent 流与工具关键路径。  
+8. 关注 **可运维与联调**：**Health 路由** 探活 Redis/LLM/行情等；SSE **保活/超时/诊断事件**；环境变量驱动 **会话库、记忆、流式诊断**；Docker Compose **多 Profile** 编排。
+
+---
+
+## 六、English Resume Bullets (full project)
+
+1. Shipped a **full-stack AI equity research assistant**: async **FastAPI** + **Next.js/React** UI with **SSE** streaming (thoughts, plans, tool calls, tokens, live Markdown report) and **Zustand** state management.  
+2. Built a **ReAct-style agent loop** with **LangChain Core**, streaming **AsyncGenerator** events, JSON tool decisions, and **pluggable LLM providers** (DeepSeek/OpenAI/Ollama).  
+3. Implemented **hybrid RAG**: **FAISS + BM25 + pgvector**, **RRF fusion**, **cross-encoder reranking**, **Redis caching**, and **graceful fallback** when dynamic vector DB is unavailable.  
+4. Automated a **web research pipeline**: search → fetch → parse → chunk → **pgvector indexing** for fresh corpora alongside offline financial indexes.  
+5. Hardened **market data + tool execution**: **intraday price fallbacks**, retries/timeouts, and **async/thread offloading** for blocking tools; added **FinBERT sentiment** and a deterministic **calculator** tool.  
+6. Added **domain safeguards**: prompt-level grounding, **entity-resolution** guardrails, and structured tool errors to drive self-correction.  
+7. Delivered **persistence & memory**: PostgreSQL conversations/messages/reports, layered prompt context, optional long-term memories, **explicit save/commit** API, background summarization hooks, and **pytest/vitest** coverage.  
+8. Improved **operability**: dependency **health checks**, SSE keepalive/diagnostics, env-driven feature flags, and **Docker Compose** profiles for local inference stacks.
+
+---
+
+## 七、面试「按图索骥」
+
+| 话题 | 代码入口 |
+|:-----|:---------|
+| ReAct 与流式事件 | `backend/app/agent/graph.py` |
+| LLM 工厂 | `backend/app/agent/llm.py` |
+| 提示词与实体 | `backend/app/agent/prompts.py`，`backend/app/agent/entity_resolution.py` |
+| 混合 RAG | `backend/app/rag/retriever.py`，`pgvector_store.py`，`reranker.py` |
+| SSE 与持久化策略 | `backend/app/api/routes/chat.py`，`conversations.py` |
+| 记忆与会话摘要 | `backend/app/services/memory_layers.py`，`turn_context.py`，`session_summarizer.py`，`chat_persist.py` |
+| 前端流式与 UI | `frontend/src/components/ChatWindow.tsx`，`frontend/src/lib/api.ts`，`store.ts` |
+| 健康检查 | `backend/app/api/routes/health.py` |
 
 祝投递顺利。

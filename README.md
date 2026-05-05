@@ -1,63 +1,99 @@
 # EZInvest
 
-AI-powered investment consulting assistant that delivers fast, accurate financial advice through a single-agent architecture with specialized tools.
+End-to-end **AI financial research assistant**: a **ReAct-style agent** (FastAPI) calls specialized tools (market data, hybrid RAG, web scrape → vector store, calculator, FinBERT sentiment), streams progress over **SSE**, and renders a live **Markdown research report** in the **Next.js** UI. Persistent chat, merged reports, layered memory, and optional long-term memories are backed by **PostgreSQL** (+ **pgvector** for dynamic corpora).
 
-## Architecture
+---
 
-**Single Agent + Specialized Tools** — one fine-tuned 7B LLM orchestrates domain-specific tools via a LangGraph ReAct loop:
+## Features
 
-- **RAG Retriever** — Hybrid FAISS (HNSW) + BM25 search with Redis caching, sub-110ms latency
-- **FinBERT Sentiment** — Fine-tuned financial sentiment classifier (~15ms inference)
-- **Quantitative Calculator** — Deterministic financial metrics (P/E, ROE, Sharpe, etc.)
-- **Market Data API** — Real-time stock prices via yfinance
+| Area | What ships |
+|------|------------|
+| **Agent** | Multi-turn reason → act → observe loop (`graph.py`), pluggable LLMs (DeepSeek / OpenAI-compatible / Ollama / local), structured tool calls, optional clarification path |
+| **RAG** | FAISS (HNSW) + BM25 + **pgvector**, RRF fusion, optional cross-encoder rerank, Redis cache, graceful fallback if dynamic DB is down |
+| **Tools** | `yfinance` quotes (retries + intraday fallbacks), DDG search + async fetch + chunk + index, FinBERT sentiment, deterministic calculator |
+| **API** | REST + **SSE** `/api/chat/stream`; `/api/conversations` (bootstrap, messages, reports, `commit-turn`); `/api/memories`; `/api/profile_agent`; `/api/health` |
+| **Frontend** | Next.js 15, React 19, Zustand, plan/progress + tool cards, stream debug (env), **explicit “Save”** to persist a turn when conversation DB is enabled |
+| **Ops** | Docker Compose (Postgres+pgvector, Redis, optional vLLM/Ollama profiles), pydantic-settings |
 
-## Quick Start
+---
+
+## Quick start
+
+### 1. Prerequisites
+
+- Python **3.11+** recommended (3.9 may work; see `backend/requirements.txt`)
+- Node **18+**
+- **Docker** (optional but easiest for Postgres + Redis)
+- GPU optional (for local vLLM profile or heavy embedding/reranker)
+
+### 2. Configure environment
 
 ```bash
-# 1. Start infrastructure
-docker compose up -d redis postgres
+cp .env.example .env
+# Edit .env: set LLM_PROVIDER, LLM_BASE_URL, LLM_MODEL_PATH, DATABASE_URL, REDIS_URL, etc.
+```
 
-# 2. Backend
+Comments inside `.env.example` document every group (LLM, FinBERT, embeddings, persistence, CORS, frontend `NEXT_PUBLIC_*` flags).
+
+### 3. Infrastructure
+
+```bash
+docker compose up -d postgres redis
+```
+
+On first backend start, tables are created via SQLAlchemy **`create_all`** (no separate migration step required for the default dev flow).
+
+### 4. Backend
+
+```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8080
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
+```
 
-# 3. Frontend
+### 5. Frontend
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-## Project Structure
+By default the browser uses same-origin `/api/*` (Next.js rewrites → backend); only set `NEXT_PUBLIC_API_URL` if you deliberately call the backend directly.
 
-```
-├── backend/
-│   ├── app/
-│   │   ├── main.py           # FastAPI entry
-│   │   ├── agent/            # LangGraph ReAct agent
-│   │   │   ├── graph.py      # State machine
-│   │   │   └── tools/        # 4 specialized tools
-│   │   ├── rag/              # Hybrid retrieval pipeline
-│   │   ├── models/           # FinBERT & LLM wrappers
-│   │   └── schemas/          # Pydantic models
-│   ├── scripts/              # Fine-tuning scripts
-│   ├── tests/                # pytest suite
-│   └── eval/                 # Benchmarks
-├── frontend/                 # Next.js chat UI
-│   ├── src/
-│   │   ├── components/       # Chat, ToolCall, Sentiment UI
-│   │   └── lib/              # API client, Zustand store
-└── docker-compose.yml
+### 6. One-shot local restart (optional)
+
+From repo root:
+
+```bash
+./scripts/restart-dev.sh
+# ./scripts/restart-dev.sh --debug-stream --no-conversation-db   # examples
 ```
 
-## Development
+---
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed architecture, tech stack, API design, and testing strategy.
+## Docs
+
+| File | Purpose |
+|------|---------|
+| [**PROJECT.md**](PROJECT.md) | Deep architecture, RAG/agent design choices, diagrams |
+| [**PROJECT_RESUME.zh.md**](PROJECT_RESUME.zh.md) | One-pager + **CN/EN resume bullets** for portfolios |
+| [**AGENTS.md**](AGENTS.md) | GitNexus / AI assistant workflow for this repo |
+
+Legacy **`DEVELOPMENT.md`** (outdated LangGraph / fine-tune narrative) has been removed; use **PROJECT.md** instead.
+
+---
 
 ## Testing
 
 ```bash
-cd backend
-pytest tests/ -v --cov=app
+cd backend && source .venv/bin/activate && pytest tests/ -q
+cd frontend && npm test -- --run
 ```
+
+---
+
+## License / disclaimer
+
+EZInvest output may be inaccurate and is **not** financial advice. Configure API keys and CORS responsibly for production.
