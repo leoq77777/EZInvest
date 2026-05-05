@@ -1,5 +1,6 @@
 """Hybrid retriever – dense (FAISS) + sparse (BM25) + dynamic (pgvector) with RRF fusion and Redis caching."""
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -107,7 +108,17 @@ class HybridRetriever:
             return []
 
         from app.rag.embedder import embed_query
+
         query_vec = embed_query(query)
+        if int(query_vec.shape[1]) != int(self._faiss_index.d):
+            logger.warning(
+                "Embedding dim %s != FAISS index dim %s; dense search skipped. "
+                "Use EMBEDDING_MODEL that matches the index (bundled index uses "
+                "BAAI/bge-large-en-v1.5, 1024-d) or rebuild data/indexes with your model.",
+                query_vec.shape[1],
+                self._faiss_index.d,
+            )
+            return []
         scores, indices = self._faiss_index.search(query_vec, top_k)
 
         results = []
@@ -176,8 +187,11 @@ class HybridRetriever:
 
         fetch_k = top_k * 4
 
-        dense_results = self._dense_search(query, fetch_k)
-        sparse_results = self._sparse_search(query, fetch_k)
+        # Offload CPU/sync HF work so the asyncio loop can still run (SSE keepalive in /chat/stream).
+        dense_results, sparse_results = await asyncio.gather(
+            asyncio.to_thread(self._dense_search, query, fetch_k),
+            asyncio.to_thread(self._sparse_search, query, fetch_k),
+        )
         dynamic_results = []
         try:
             # Add a safety check or short timeout if possible, 
@@ -194,11 +208,17 @@ class HybridRetriever:
         fused = _rrf_fuse(dense_results, sparse_results, dynamic_results)
         candidates = fused[: top_k * 3]
 
-        # If we have enough candidates, rerank. Otherwise return as-is.
-        if len(candidates) >= 2:
+        # Optional cross-encoder (second HF model). Chat LLM API keys do not apply here.
+        if (
+            self._settings.enable_rag_reranker
+            and len(candidates) >= 2
+        ):
             try:
                 from app.rag.reranker import rerank
-                reranked = rerank(query, candidates, top_k=top_k)
+
+                reranked = await asyncio.to_thread(
+                    rerank, query, candidates, top_k
+                )
             except Exception as e:
                 logger.warning("Reranker failed, returning fused results: %s", e)
                 reranked = candidates[:top_k]

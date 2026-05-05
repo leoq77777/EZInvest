@@ -4,6 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:debug": "NEXT_PUBLIC_STREAM_DEBUG=1 next dev",
+    "dev:nodb": "NEXT_PUBLIC_CONVERSATION_DB=off next dev",
+    "dev:debug-nodb": "NEXT_PUBLIC_STREAM_DEBUG=1 NEXT_PUBLIC_CONVERSATION_DB=off next dev",
+    "dev:memory": "NEXT_PUBLIC_SAVE_USER_MESSAGE_AS_MEMORY=1 next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

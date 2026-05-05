@@ -62,3 +62,12 @@ htmlcov/
 # Logs
 *.log
 logs/
+
+# Local run artifacts (do not push)
+backend/backend_log.txt
+frontend/frontend_log.txt
+frontend/browser_smoke.png
+frontend/tsconfig.tsbuildinfo
+
+# GitNexus (local code intelligence index — do not commit)
+.gitnexus/

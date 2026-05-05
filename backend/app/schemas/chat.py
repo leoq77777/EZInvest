@@ -10,6 +10,35 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
     session_id: str = Field(default_factory=lambda: str(uuid4()))
     stream: bool = True
+    # Persistence (optional): stable browser id + server-side conversation
+    profile_id: Optional[str] = Field(
+        default=None,
+        max_length=128,
+        description="Stable client id (e.g. localStorage) for history + memory",
+    )
+    conversation_id: Optional[str] = Field(
+        default=None,
+        max_length=36,
+        description="UUID of conversation row; required to persist turns",
+    )
+    save_message_as_memory: bool = Field(
+        default=False,
+        description="If true, also store the user message in long-term memory after reply",
+    )
+    auto_persist_turn: bool = Field(
+        default=False,
+        description=(
+            "If true, persist this turn during /stream (user row at start, assistant+report in background). "
+            "If false (default), turns are saved only via POST .../commit-turn when the user clicks Save."
+        ),
+    )
+    debug_stream: bool = Field(
+        default=False,
+        description=(
+            "Request SSE event: debug (phase + elapsed_ms). "
+            "Also enable via backend DEBUG_STREAM=true or frontend NEXT_PUBLIC_STREAM_DEBUG=1 at startup."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -63,6 +92,12 @@ class SummarizingEvent(BaseModel):
     pass
 
 
+class ReportEvent(BaseModel):
+    """Full incremental research report (markdown) for the live report panel."""
+
+    markdown: str
+
+
 # ---------------------------------------------------------------------------
 # Non-streaming response
 # ---------------------------------------------------------------------------
@@ -72,3 +107,4 @@ class ChatResponse(BaseModel):
     answer: str
     tool_calls: List[ToolCallEvent] = []
     total_latency_ms: float
+    report_markdown: Optional[str] = None

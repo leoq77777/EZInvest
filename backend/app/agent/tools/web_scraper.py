@@ -5,11 +5,27 @@ from bs4 import BeautifulSoup
 
 from langchain_core.tools import tool
 import httpx
-from duckduckgo_search import DDGS
+from app.agent.entity_resolution import SANDISK_FACT, mentions_sandisk
 
-from app.rag.pgvector_store import get_dynamic_store
+try:
+    from duckduckgo_search import DDGS
+except ImportError:  # pragma: no cover
+    DDGS = None  # type: ignore[misc, assignment]
 
 logger = logging.getLogger(__name__)
+
+
+def _curated_web_hint(query: str) -> str:
+    if not mentions_sandisk(query):
+        return ""
+    fact = SANDISK_FACT
+    return (
+        "Curated corporate-action fallback: "
+        f"{fact['entity']} is treated as independently listed with ticker "
+        f"{fact['ticker']} since {fact['valid_from']} after separation from "
+        f"Western Digital ({fact['former_parent_ticker']}). Search/live-data "
+        "providers should query SNDK, not WDC, for SanDisk stock price."
+    )
 
 async def fetch_and_parse(url: str) -> str:
     """Fetch a URL and extract text content."""
@@ -60,20 +76,50 @@ async def web_scraper_tool(query: str, max_urls: int = 2) -> str:
         max_urls: Number of top URLs to scrape and index (default 2, max 3).
     """
     logger.info(f"Web scraper initiated for query: {query}")
-    
-    urls = []
-    try:
+
+    if DDGS is None:
+        hint = _curated_web_hint(query)
+        if hint:
+            return hint + "\n\nWeb search is unavailable (duckduckgo_search not installed)."
+        return (
+            "Web search is unavailable (duckduckgo_search not installed). "
+            "Install backend dependencies or use retriever/market_data only."
+        )
+
+    def _ddgs_sync_urls() -> list[str]:
+        u: list[str] = []
         with DDGS() as ddgs:
-            # Using region='wt-wt' (no region) and safesearch='off' for broader results
-            results = ddgs.text(query, region="wt-wt", safesearch="off", max_results=max_urls)
+            search_query = query
+            if mentions_sandisk(query) and "SNDK" not in query.upper():
+                search_query = (
+                    query
+                    + " SanDisk SNDK stock independent listing 2025 spinoff Western Digital"
+                )
+            results = ddgs.text(
+                search_query,
+                region="wt-wt",
+                safesearch="off",
+                max_results=max_urls,
+            )
             if results:
-                urls = [r["href"] for r in results if "href" in r]
+                u = [r["href"] for r in results if "href" in r]
+        return u
+
+    urls: list[str] = []
+    try:
+        urls = await asyncio.to_thread(_ddgs_sync_urls)
     except Exception as e:
         logger.error(f"DDGS search failed for query '{query}': {e}")
+        hint = _curated_web_hint(query)
+        if hint:
+            return f"{hint}\n\nWeb search encountered an issue: {e}"
         # If it's a 'return None' error, it might be a block; try a simpler query or just fail gracefully
         return f"Web search encountered an issue (it might be rate-limited). Error: {e}"
 
     if not urls:
+        hint = _curated_web_hint(query)
+        if hint:
+            return hint + "\n\nNo web URLs were returned by the search provider."
         return "No results found on the web."
 
     logger.info(f"Scraping {len(urls)} URLs...")
@@ -92,9 +138,19 @@ async def web_scraper_tool(query: str, max_urls: int = 2) -> str:
             all_metadatas.extend([{"source": url}] * len(chunks))
             
     if not all_chunks:
+        hint = _curated_web_hint(query)
+        if hint:
+            return hint + f"\n\nSearched {urls}, but failed to extract readable content."
         return f"Searched {urls}, but failed to extract readable content."
-        
-    # Ingest into dynamic vector store
+
+    try:
+        from app.rag.pgvector_store import get_dynamic_store
+    except ImportError:
+        return (
+            f"Scraped {len(all_chunks)} chunks from web but pgvector store is not available "
+            f"(langchain_postgres not installed). Sources:\n" + "\n".join(urls)
+        )
+
     store = get_dynamic_store()
     await store.add_texts(texts=all_chunks, metadatas=all_metadatas)
     

@@ -3,10 +3,28 @@
 import logging
 
 from langchain_core.tools import tool
+from app.agent.entity_resolution import SANDISK_FACT, mentions_sandisk
 
 logger = logging.getLogger(__name__)
 
 _rag_pipeline = None
+
+
+def _curated_fallback(query: str) -> str:
+    """High-confidence corporate-action facts not yet present in vector indexes."""
+    if not mentions_sandisk(query):
+        return ""
+    fact = SANDISK_FACT
+    return (
+        "[curated] (score=1.000, source=EZInvest corporate-actions override)\n"
+        f"Entity: {fact['entity']}\n"
+        f"Current ticker: {fact['ticker']}\n"
+        f"Status: {fact['status']} since {fact['valid_from']}\n"
+        f"Former parent ticker: {fact['former_parent_ticker']}\n"
+        f"Grounding: {fact['summary']}\n"
+        "Use SNDK for SanDisk market-data requests; do not use WDC unless the "
+        "user explicitly asks about Western Digital or a comparison with WDC."
+    )
 
 
 def _get_rag_pipeline():
@@ -37,7 +55,10 @@ async def retriever_tool(query: str, top_k: int = 5) -> str:
         logger.error("Retrieval failed: %s", e)
         return f"Retrieval error: {e}"
 
+    fallback = _curated_fallback(query)
     if not results:
+        if fallback:
+            return fallback
         return "No relevant documents found for the given query."
 
     formatted = []
@@ -46,5 +67,8 @@ async def retriever_tool(query: str, top_k: int = 5) -> str:
         text = doc.get("text", "")
         score = doc.get("score", 0.0)
         formatted.append(f"[{i}] (score={score:.3f}, source={source})\n{text}")
+
+    if fallback:
+        formatted.insert(0, fallback)
 
     return "\n\n".join(formatted)

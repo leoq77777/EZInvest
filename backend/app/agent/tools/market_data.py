@@ -6,6 +6,7 @@ import time
 from functools import wraps
 
 from langchain_core.tools import tool
+from app.agent.entity_resolution import mentions_sandisk
 
 logger = logging.getLogger(__name__)
 
@@ -70,12 +71,21 @@ def market_data_tool(ticker: str, period: str = "1mo") -> str:
     except ImportError:
         return "yfinance is not installed. Please install it: pip install yfinance"
 
+    normalized_ticker = "SNDK" if mentions_sandisk(ticker) else ticker
+
     try:
-        data = _fetch_with_retry(ticker, period)
+        data = _fetch_with_retry(normalized_ticker, period)
     except MarketDataError as e:
+        hint = (
+            "SanDisk should be checked with ticker SNDK after its 2025 separation "
+            "from Western Digital (WDC). Do not substitute WDC for SanDisk."
+            if mentions_sandisk(ticker)
+            else "Verify the company's current ticker before trying a parent/legacy ticker."
+        )
         return json.dumps({
-            "error": f"Ticker '{ticker}' not found or no longer active. Note: If the company was acquired (like SanDisk), please check its parent company's ticker.",
-            "ticker": ticker,
+            "error": f"Ticker '{normalized_ticker}' not found or no longer active. {hint}",
+            "ticker": normalized_ticker,
+            "original_ticker": ticker,
             "is_defunct_possible": True
         }, ensure_ascii=False)
 
@@ -93,7 +103,8 @@ def market_data_tool(ticker: str, period: str = "1mo") -> str:
     previous_close = info.get("previousClose")
 
     price_data = {
-        "ticker": ticker.upper(),
+        "ticker": normalized_ticker.upper(),
+        "original_ticker": ticker,
         "current_price": round(float(real_time_price), 2),
         "previous_close": round(float(previous_close), 2) if previous_close else None,
         "open": round(float(info.get("regularMarketOpen", latest["Open"])), 2),

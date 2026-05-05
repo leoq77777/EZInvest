@@ -1,7 +1,7 @@
 """Unit tests for all agent tools – external dependencies are fully mocked."""
 
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 import pytest
 import pandas as pd
@@ -129,9 +129,11 @@ class TestMarketDataTool:
 # =============================================================================
 
 class TestSentimentTool:
-    @patch("app.agent.tools.sentiment._get_sentiment_model")
     @pytest.mark.asyncio
-    async def test_sentiment_positive(self, mock_get_model):
+    async def test_sentiment_positive(self):
+        import app.agent.tools.sentiment as sentiment_mod
+
+        sentiment_mod._sentiment_model = None
         from app.agent.tools.sentiment import sentiment_tool
 
         mock_model = MagicMock()
@@ -140,19 +142,30 @@ class TestSentimentTool:
             "score": 0.92,
             "scores": {"positive": 0.92, "negative": 0.03, "neutral": 0.05},
         }
-        mock_get_model.return_value = mock_model
 
-        result = await sentiment_tool.ainvoke(
-            {"text": "Revenue exceeded expectations by 20%"}
-        )
+        async def fake_to_thread(fn, /, *args, **kwargs):
+            if args:
+                return mock_model.predict(*args)
+            return mock_model
+
+        with patch.object(
+            sentiment_mod.asyncio,
+            "to_thread",
+            new=AsyncMock(side_effect=fake_to_thread),
+        ):
+            result = await sentiment_tool.ainvoke(
+                {"text": "Revenue exceeded expectations by 20%"}
+            )
 
         assert "positive" in result.lower()
         assert "0.92" in result
         mock_model.predict.assert_called_once()
 
-    @patch("app.agent.tools.sentiment._get_sentiment_model")
     @pytest.mark.asyncio
-    async def test_sentiment_negative(self, mock_get_model):
+    async def test_sentiment_negative(self):
+        import app.agent.tools.sentiment as sentiment_mod
+
+        sentiment_mod._sentiment_model = None
         from app.agent.tools.sentiment import sentiment_tool
 
         mock_model = MagicMock()
@@ -161,24 +174,44 @@ class TestSentimentTool:
             "score": 0.85,
             "scores": {"positive": 0.05, "negative": 0.85, "neutral": 0.10},
         }
-        mock_get_model.return_value = mock_model
 
-        result = await sentiment_tool.ainvoke(
-            {"text": "The company reported significant losses this quarter"}
-        )
+        async def fake_to_thread(fn, /, *args, **kwargs):
+            if args:
+                return mock_model.predict(*args)
+            return mock_model
+
+        with patch.object(
+            sentiment_mod.asyncio,
+            "to_thread",
+            new=AsyncMock(side_effect=fake_to_thread),
+        ):
+            result = await sentiment_tool.ainvoke(
+                {"text": "The company reported significant losses this quarter"}
+            )
 
         assert "negative" in result.lower()
 
-    @patch("app.agent.tools.sentiment._get_sentiment_model")
     @pytest.mark.asyncio
-    async def test_sentiment_model_error(self, mock_get_model):
+    async def test_sentiment_model_error(self):
+        import app.agent.tools.sentiment as sentiment_mod
+
+        sentiment_mod._sentiment_model = None
         from app.agent.tools.sentiment import sentiment_tool
 
         mock_model = MagicMock()
         mock_model.predict.side_effect = RuntimeError("Model OOM")
-        mock_get_model.return_value = mock_model
 
-        result = await sentiment_tool.ainvoke({"text": "test"})
+        async def fake_to_thread(fn, /, *args, **kwargs):
+            if args:
+                return mock_model.predict(*args)
+            return mock_model
+
+        with patch.object(
+            sentiment_mod.asyncio,
+            "to_thread",
+            new=AsyncMock(side_effect=fake_to_thread),
+        ):
+            result = await sentiment_tool.ainvoke({"text": "test"})
         assert "error" in result.lower()
 
 
@@ -193,19 +226,11 @@ class TestRetrieverTool:
         from app.agent.tools.retriever import retriever_tool
 
         mock_pipeline = MagicMock()
-        mock_pipeline.retrieve = MagicMock(return_value=[
-            {"text": "NVIDIA Q3 revenue was $18.1B", "source": "10-Q", "score": 0.95},
-            {"text": "Data center segment grew 279%", "source": "earnings", "score": 0.88},
-        ])
-        # Make the mock work with await
-        import asyncio
-        mock_pipeline.retrieve = MagicMock(
-            side_effect=lambda *a, **kw: asyncio.coroutine(
-                lambda: [
-                    {"text": "NVIDIA Q3 revenue was $18.1B", "source": "10-Q", "score": 0.95},
-                    {"text": "Data center segment grew 279%", "source": "earnings", "score": 0.88},
-                ]
-            )()
+        mock_pipeline.retrieve = AsyncMock(
+            return_value=[
+                {"text": "NVIDIA Q3 revenue was $18.1B", "source": "10-Q", "score": 0.95},
+                {"text": "Data center segment grew 279%", "source": "earnings", "score": 0.88},
+            ],
         )
         mock_get_pipeline.return_value = mock_pipeline
 
@@ -221,14 +246,25 @@ class TestRetrieverTool:
         from app.agent.tools.retriever import retriever_tool
 
         mock_pipeline = MagicMock()
-        import asyncio
-        mock_pipeline.retrieve = MagicMock(
-            side_effect=lambda *a, **kw: asyncio.coroutine(lambda: [])()
-        )
+        mock_pipeline.retrieve = AsyncMock(return_value=[])
         mock_get_pipeline.return_value = mock_pipeline
 
         result = await retriever_tool.ainvoke({"query": "nonexistent topic"})
         assert "No relevant documents" in result
+
+    @patch("app.agent.tools.retriever._get_rag_pipeline")
+    @pytest.mark.asyncio
+    async def test_retriever_sandisk_curated_fallback(self, mock_get_pipeline):
+        from app.agent.tools.retriever import retriever_tool
+
+        mock_pipeline = MagicMock()
+        mock_pipeline.retrieve = AsyncMock(return_value=[])
+        mock_get_pipeline.return_value = mock_pipeline
+
+        result = await retriever_tool.ainvoke({"query": "SanDisk stock price"})
+        assert "SNDK" in result
+        assert "WDC" in result
+        assert "corporate-actions override" in result
 
 
 # =============================================================================

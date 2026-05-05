@@ -16,7 +16,17 @@ if (typeof crypto === "undefined") {
 
 describe("ChatStore", () => {
   beforeEach(() => {
-    useChatStore.getState().clearMessages();
+    useChatStore.setState({
+      messages: [],
+      sessionId: "test-session",
+      profileId: "",
+      conversationId: null,
+      persistenceReady: false,
+      bootstrapDone: true,
+      rememberNextMessage: false,
+      isStreaming: false,
+      liveReportMarkdown: "",
+    });
   });
 
   it("starts with empty messages", () => {
@@ -44,6 +54,25 @@ describe("ChatStore", () => {
     expect(messages[0].role).toBe("assistant");
     expect(messages[0].content).toBe("");
     expect(messages[0].toolCalls).toEqual([]);
+    expect(messages[0].debugTrace).toEqual([]);
+    expect(messages[0].diagnosticRequested).toBeFalsy();
+  });
+
+  it("marks diagnosticRequested when starting assistant with diagnostic", () => {
+    useChatStore.getState().startAssistantMessage({ diagnostic: true });
+    const msg = useChatStore.getState().messages[0];
+    expect(msg.diagnosticRequested).toBe(true);
+  });
+
+  it("appends debug trace lines", () => {
+    const msgId = useChatStore.getState().startAssistantMessage();
+    useChatStore.getState().appendDebug(msgId, "[10ms] route.enter");
+    useChatStore.getState().appendDebug(msgId, "[500ms] graph.expand.llm");
+    const msg = useChatStore.getState().messages[0];
+    expect(msg.debugTrace).toEqual([
+      "[10ms] route.enter",
+      "[500ms] graph.expand.llm",
+    ]);
   });
 
   it("appends tokens to an assistant message", () => {
@@ -99,11 +128,12 @@ describe("ChatStore", () => {
     expect(isStreaming).toBe(false);
   });
 
-  it("clearMessages resets state with new session", () => {
+  it("clearLocalMessages + rotateSessionId resets UI and session id", () => {
     useChatStore.getState().addUserMessage("test");
     const oldSession = useChatStore.getState().sessionId;
 
-    useChatStore.getState().clearMessages();
+    useChatStore.getState().clearLocalMessages();
+    useChatStore.getState().rotateSessionId();
 
     const { messages, sessionId } = useChatStore.getState();
     expect(messages).toHaveLength(0);

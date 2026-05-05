@@ -1,21 +1,26 @@
 """Cross-encoder reranker for improving retrieval precision."""
 
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
 _reranker = None
+_reranker_lock = threading.Lock()
 
 
 def _get_reranker():
     global _reranker
-    if _reranker is None:
-        from sentence_transformers import CrossEncoder
-        from app.config import get_settings
+    if _reranker is not None:
+        return _reranker
+    with _reranker_lock:
+        if _reranker is None:
+            from sentence_transformers import CrossEncoder
+            from app.config import get_settings
 
-        settings = get_settings()
-        logger.info("Loading reranker model: %s", settings.reranker_model)
-        _reranker = CrossEncoder(settings.reranker_model, max_length=512)
+            settings = get_settings()
+            logger.info("Loading reranker model: %s", settings.reranker_model)
+            _reranker = CrossEncoder(settings.reranker_model, max_length=512)
     return _reranker
 
 

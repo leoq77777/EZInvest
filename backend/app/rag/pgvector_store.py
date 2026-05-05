@@ -73,7 +73,7 @@ class DynamicVectorStore:
                 })
             return results
         except Exception as e:
-            logger.error(f"Failed to search pgvector: {e}")
+            logger.warning("pgvector search skipped: %s", e)
             return []
 
 # Singleton instance

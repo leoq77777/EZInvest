@@ -1,5 +1,6 @@
 """FinBERT-based financial sentiment analysis tool."""
 
+import asyncio
 import logging
 
 from langchain_core.tools import tool
@@ -7,15 +8,7 @@ from langchain_core.tools import tool
 logger = logging.getLogger(__name__)
 
 _sentiment_model = None
-
-
-def _get_sentiment_model():
-    global _sentiment_model
-    if _sentiment_model is None:
-        from app.models.finbert import FinBERTSentiment
-
-        _sentiment_model = FinBERTSentiment()
-    return _sentiment_model
+_load_lock = asyncio.Lock()
 
 
 @tool
@@ -30,9 +23,18 @@ async def sentiment_tool(text: str) -> str:
         text: The financial text to analyze. Can be a single sentence or
               a short paragraph (max ~512 tokens).
     """
-    model = _get_sentiment_model()
+    global _sentiment_model
+    if _sentiment_model is None:
+        async with _load_lock:
+            if _sentiment_model is None:
+                from app.models.finbert import FinBERTSentiment
+
+                # HuggingFace / torch init blocks the event loop for minutes on first load;
+                # offload so SSE and other requests can still make progress.
+                _sentiment_model = await asyncio.to_thread(FinBERTSentiment)
+    model = _sentiment_model
     try:
-        result = model.predict(text)
+        result = await asyncio.to_thread(model.predict, text)
     except Exception as e:
         logger.error("Sentiment analysis failed: %s", e)
         return f"Sentiment analysis error: {e}"

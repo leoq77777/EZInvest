@@ -67,6 +67,8 @@ export function PlanProgressView({
   if (!steps.length) return null;
 
   const completedCount = steps.filter((s) => s.status === "done").length;
+  const runningCount = steps.filter((s) => s.status === "running").length;
+  const errorCount = steps.filter((s) => s.status === "error").length;
   const allDone = completedCount === steps.length;
 
   return (
@@ -76,8 +78,10 @@ export function PlanProgressView({
         <span className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
           投研执行计划
         </span>
-        <span className="text-xs text-[var(--color-text-muted)]">
-          {completedCount}/{steps.length}
+        <span className="text-xs text-[var(--color-text-muted)] tabular-nums">
+          完成 {completedCount}/{steps.length}
+          {runningCount > 0 ? ` · 进行中 ${runningCount}` : ""}
+          {errorCount > 0 ? ` · 失败 ${errorCount}` : ""}
         </span>
       </div>
 
@@ -107,7 +111,9 @@ export function PlanProgressView({
                   ? "bg-blue-500/5"
                   : step.status === "done"
                     ? "bg-emerald-500/5"
-                    : ""
+                    : step.status === "error"
+                      ? "bg-red-500/5"
+                      : ""
               }`}
             >
               <div className="flex-shrink-0 mt-0.5">
