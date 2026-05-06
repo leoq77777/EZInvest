@@ -1,6 +1,6 @@
 # EZInvest — 全项目总结 · 简历要点
 
-面向「要写进简历 / 作品集」的**一页纸**：覆盖**整条产品线**（Agent、检索、工具链、前端、持久化与运行保障），不单指某次迭代。深挖实现见 [PROJECT.md](./PROJECT.md)。
+面向「要写进简历 / 作品集」的**一页纸**：覆盖**整条产品线**（Agent、检索、工具链、前端、持久化与运行保障），不单指某次迭代。深挖实现见 [PROJECT.md](./PROJECT.md)；**可复现 benchmark（含 0-LLM mock 基线）**见 [BENCHMARK.md](./BENCHMARK.md)。
 
 ---
 

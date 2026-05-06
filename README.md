@@ -79,6 +79,7 @@ From repo root:
 |------|---------|
 | [**PROJECT.md**](PROJECT.md) | Deep architecture, RAG/agent design choices, diagrams |
 | [**PROJECT_RESUME.zh.md**](PROJECT_RESUME.zh.md) | One-pager + **CN/EN resume bullets** for portfolios |
+| [**BENCHMARK.md**](BENCHMARK.md) | Agent route benchmark (**mock = 0 LLM calls**) + how to run live safely |
 | [**AGENTS.md**](AGENTS.md) | GitNexus / AI assistant workflow for this repo |
 
 Legacy **`DEVELOPMENT.md`** (outdated LangGraph / fine-tune narrative) has been removed; use **PROJECT.md** instead.
