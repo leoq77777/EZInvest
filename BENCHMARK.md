@@ -2,6 +2,21 @@
 
 目标：用**尽量少的外部 LLM / 云 API 调用**得到可写进简历或 PR 的**可复现数字**，并区分「纯路由开销」与「真实 Agent 端到端」。
 
+**分层能力点验（推荐主叙事）**：顶层目录 [benchmark/README.md](./benchmark/README.md) 描述「工具层 / RAG / 决策核心」低成本方案；`/api/chat` 的 mock 仅是**附录式路由基线**，两者目标不同。
+
+---
+
+## 0. 为何 live（真实 HTTP）会超时 / 断连？mock 设计不合理吗？
+
+**不是。** 两类评测回答的是完全不同的问题：
+
+| 类型 | 会卡在哪里 |
+|------|------------|
+| **mock（`eval/run_agent_benchmark.py --mode mock`）** | 不应依赖外网 LLM：对 `run_agent` 等打 patch，只量 FastAPI/Pydantic/JSON。**若 mock 变慢，多半是进程/GC 抖动，而非「方案错误」。** |
+| **live HTTP `/api/chat`** | 走的是**完整 ReAct**：多轮 **LLM** + RAG/embed + 可选 yfinance / 爬虫等。**整体耗时常远大于** 客户端设的 120s/300s → `ReadTimeout`。**断连**常见原因包括：后端单 worker 在长推理时被代理/客户端闲置掐断、`LLM_HTTP` 报错导致连接异常关闭、本地 Ollama/vLLM 未就绪或过载、`LLM_TIMEOUT_SEC` 与客户端 timeout 不匹配、环境里 **HTTP/SOCKS 代理**干扰 `httpx` 等。 |
+
+因此：**超时/断连反映的是「端到端链路长 + 环境不稳定」**，不是用来否定 mock。**要在有限预算下写简历数字，应主力采用 [benchmark/](benchmark/) 分层点验**，而不是强求「几条开放式研报 live 成功率/P50」。
+
 ---
 
 ## 1. 两种模式（务必分清）
