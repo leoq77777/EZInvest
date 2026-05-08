@@ -6,6 +6,7 @@ from typing import Any, AsyncGenerator, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from app.config import get_settings
 from app.agent.llm import get_llm
 from app.agent.entity_resolution import (
     entity_grounding_observation,
@@ -207,7 +208,7 @@ async def run_agent_stream(
     if ev:
         yield ev
     observations: list[dict[str, Any]] = []
-    max_iterations = 8
+    max_iterations = max(1, int(get_settings().agent_max_iterations))
 
     system_text = _compose_system_prompt(
         memory_context,

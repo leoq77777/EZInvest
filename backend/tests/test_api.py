@@ -101,6 +101,29 @@ async def test_chat_success(mock_run_agent, mock_assemble, client):
 @pytest.mark.asyncio
 @patch("app.api.routes.chat.assemble_memory_layers", new_callable=AsyncMock)
 @patch("app.api.routes.chat.run_agent", new_callable=AsyncMock)
+@patch("app.api.routes.chat.get_llm")
+async def test_chat_mode_uses_plain_llm_only(mock_get_llm, mock_run_agent, mock_assemble, client):
+    """Chat mode bypasses memory/RAG/agent and does not produce a report."""
+    mock_llm = MagicMock()
+    mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="plain answer"))
+    mock_get_llm.return_value = mock_llm
+
+    response = await client.post(
+        "/api/chat",
+        json={"message": "hello", "stream": False, "mode": "chat"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["answer"] == "plain answer"
+    assert data["report_markdown"] is None
+    mock_assemble.assert_not_awaited()
+    mock_run_agent.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@patch("app.api.routes.chat.assemble_memory_layers", new_callable=AsyncMock)
+@patch("app.api.routes.chat.run_agent", new_callable=AsyncMock)
 async def test_chat_agent_error(mock_run_agent, mock_assemble, client):
     """Server returns 500 when agent raises."""
     mock_assemble.return_value = _empty_layers()
@@ -111,6 +134,30 @@ async def test_chat_agent_error(mock_run_agent, mock_assemble, client):
         json={"message": "test query"},
     )
     assert response.status_code == 500
+
+
+@pytest.mark.asyncio
+@patch("app.api.routes.chat.assemble_memory_layers", new_callable=AsyncMock)
+@patch("app.api.routes.chat.run_agent_stream")
+@patch("app.api.routes.chat.get_llm")
+async def test_chat_stream_mode_uses_plain_llm_only(mock_get_llm, mock_stream, mock_assemble, client):
+    """Streaming chat mode emits token + done without research events/report."""
+    mock_llm = MagicMock()
+    mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="quick reply"))
+    mock_get_llm.return_value = mock_llm
+
+    response = await client.post(
+        "/api/chat/stream",
+        json={"message": "hello", "stream": True, "mode": "chat"},
+    )
+
+    assert response.status_code == 200
+    body = response.text
+    assert "event: token" in body
+    assert "quick reply" in body
+    assert "event: report" not in body
+    mock_assemble.assert_not_awaited()
+    mock_stream.assert_not_called()
 
 
 # =============================================================================

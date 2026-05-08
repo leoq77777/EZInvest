@@ -14,6 +14,7 @@ from app.db.session import async_session_maker
 from app.services.chat_persist import load_memory_prompt_block
 
 logger = logging.getLogger(__name__)
+_rag_retriever = None
 
 
 def _format_rag_hits(results: list[dict]) -> str:
@@ -31,11 +32,13 @@ def _format_rag_hits(results: list[dict]) -> str:
 async def build_rag_core_block(query: str) -> str:
     """Layer 3: hybrid retrieval (FAISS + BM25 + pgvector) — decision-grade corpus."""
     try:
+        global _rag_retriever
         from app.rag.retriever import HybridRetriever
 
         settings = get_settings()
-        retriever = HybridRetriever()
-        docs = await retriever.retrieve(query.strip(), top_k=settings.rag_core_top_k)
+        if _rag_retriever is None:
+            _rag_retriever = HybridRetriever()
+        docs = await _rag_retriever.retrieve(query.strip(), top_k=settings.rag_core_top_k)
         return _format_rag_hits(docs)
     except Exception:
         logger.exception("build_rag_core_block failed")

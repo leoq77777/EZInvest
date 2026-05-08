@@ -6,13 +6,10 @@ import time
 from functools import wraps
 
 from langchain_core.tools import tool
+from app.config import get_settings
 from app.agent.entity_resolution import mentions_sandisk
 
 logger = logging.getLogger(__name__)
-
-_MAX_RETRIES = 2
-_TIMEOUT_SECONDS = 10
-
 
 class MarketDataError(Exception):
     pass
@@ -22,12 +19,15 @@ def _fetch_with_retry(ticker: str, period: str) -> dict:
     """Fetch stock data with retry and timeout tracking."""
     import yfinance as yf
 
+    settings = get_settings()
+    max_retries = max(0, int(settings.market_data_max_retries))
+    timeout_seconds = max(1.0, float(settings.market_data_timeout_sec))
     last_error = None
-    for attempt in range(_MAX_RETRIES + 1):
+    for attempt in range(max_retries + 1):
         start = time.perf_counter()
         try:
             stock = yf.Ticker(ticker.upper())
-            hist = stock.history(period=period, timeout=_TIMEOUT_SECONDS)
+            hist = stock.history(period=period, timeout=timeout_seconds)
             elapsed = (time.perf_counter() - start) * 1000
 
             if hist.empty:
@@ -45,13 +45,17 @@ def _fetch_with_retry(ticker: str, period: str) -> dict:
             elapsed = (time.perf_counter() - start) * 1000
             logger.warning(
                 "yfinance fetch FAIL: ticker=%s attempt=%d/%d latency=%.0fms error=%s",
-                ticker, attempt + 1, _MAX_RETRIES + 1, elapsed, e,
+                ticker, attempt + 1, max_retries + 1, elapsed, e,
             )
-            if attempt < _MAX_RETRIES:
+            # 429/rate-limit is not helped by immediate retries; return quickly so
+            # the agent can finish with partial evidence instead of stalling.
+            if "too many requests" in str(e).lower() or "rate limited" in str(e).lower():
+                break
+            if attempt < max_retries:
                 time.sleep(0.5 * (attempt + 1))
 
     raise MarketDataError(
-        f"All {_MAX_RETRIES + 1} attempts failed for {ticker}: {last_error}"
+        f"All {max_retries + 1} attempts failed for {ticker}: {last_error}"
     )
 
 

@@ -10,11 +10,18 @@ _llm = None
 
 
 def _build_chat_openai():
+    import httpx
     from langchain_openai import ChatOpenAI
     from app.config import get_settings
 
     settings = get_settings()
     provider = (settings.llm_provider or "local").strip().lower()
+    # Force direct outbound connections for model calls.
+    # This avoids accidentally routing DeepSeek/OpenAI traffic through system proxy settings.
+    transport_kwargs = {
+        "http_client": httpx.Client(trust_env=False),
+        "http_async_client": httpx.AsyncClient(trust_env=False),
+    }
 
     if provider == "deepseek" and (settings.deepseek_api_key or "").strip():
         base = (settings.deepseek_base_url or "https://api.deepseek.com/v1").rstrip("/")
@@ -30,6 +37,7 @@ def _build_chat_openai():
             temperature=0.1,
             max_tokens=2048,
             timeout=settings.llm_timeout_sec,
+            **transport_kwargs,
         )
 
     if provider == "openai" and (settings.openai_api_key or "").strip():
@@ -39,6 +47,7 @@ def _build_chat_openai():
             temperature=0.1,
             max_tokens=2048,
             timeout=settings.llm_timeout_sec,
+            **transport_kwargs,
         )
         if (settings.openai_base_url or "").strip():
             kwargs["base_url"] = settings.openai_base_url.strip().rstrip("/")
@@ -64,6 +73,7 @@ def _build_chat_openai():
         temperature=0.1,
         max_tokens=2048,
         timeout=settings.llm_timeout_sec,
+        **transport_kwargs,
     )
 
 

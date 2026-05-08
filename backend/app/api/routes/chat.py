@@ -6,8 +6,10 @@ from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.schemas.chat import (
+    ChatMode,
     ChatRequest,
     ChatResponse,
     DoneEvent,
@@ -19,6 +21,7 @@ from app.schemas.chat import (
     SummarizingEvent,
     TokenEvent,
 )
+from app.agent.llm import get_llm
 from app.agent.graph import run_agent, run_agent_stream
 from app.services.chat_persist import append_assistant_turn, append_user_turn
 from app.services.memory_layers import assemble_memory_layers
@@ -35,10 +38,48 @@ def _sse_event(event_type: str, data: dict) -> str:
     return f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+async def _run_plain_chat(message: str) -> str:
+    """Fast chat path: one LLM call, no tools/RAG/report generation."""
+    llm = get_llm()
+    resp = await llm.ainvoke(
+        [
+            SystemMessage(
+                content=(
+                    "You are EZInvest, a friendly AI investment assistant. In chat mode, "
+                    "your role is to help users think through finance, investing, product "
+                    "usage, and general questions with clear, conversational answers. "
+                    "Keep responses concise and practical. Do not call tools, do not use "
+                    "RAG, and do not generate a research report. If the user asks for live "
+                    "market prices, breaking news, filings, or source-backed analysis, "
+                    "explain that research mode is better for that task. Never fabricate "
+                    "financial data, and remind users that your output is not financial advice "
+                    "when giving investment-related opinions."
+                )
+            ),
+            HumanMessage(content=message),
+        ]
+    )
+    return (getattr(resp, "content", None) or "").strip()
+
+
 @router.post("")
 async def chat(request: ChatRequest):
     """Non-streaming chat: returns full response after agent completes."""
     start = time.perf_counter()
+    if request.mode == ChatMode.CHAT:
+        try:
+            answer = await _run_plain_chat(request.message)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        return ChatResponse(
+            session_id=request.session_id,
+            answer=answer,
+            tool_calls=[],
+            total_latency_ms=round(elapsed_ms, 1),
+            report_markdown=None,
+        )
+
     layers = await assemble_memory_layers(
         request.profile_id,
         request.conversation_id,
@@ -124,6 +165,33 @@ async def chat_stream(
         )
         if stream_debug:
             yield _dbg("route.enter", "past first thought chunk")
+
+        if request.mode == ChatMode.CHAT:
+            yield _sse_event(
+                "thought",
+                ThoughtEvent(content="闲聊模式：跳过 RAG、工具和研报生成，直接调用 LLM…").model_dump(),
+            )
+            if stream_debug:
+                yield _dbg("route.plain_chat.before_llm", "plain chat llm.ainvoke")
+            try:
+                answer = await _run_plain_chat(request.message)
+            except Exception as e:
+                logger.exception("plain chat error: %s", e)
+                yield _sse_event("error", {"detail": str(e)})
+                answer = ""
+            if stream_debug:
+                yield _dbg("route.plain_chat.after_llm", "plain chat answer returned")
+            assistant_chunks.append(answer)
+            yield _sse_event("token", TokenEvent(content=answer).model_dump())
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            yield _sse_event(
+                "done",
+                DoneEvent(
+                    session_id=request.session_id,
+                    total_latency_ms=round(elapsed_ms, 1),
+                ).model_dump(),
+            )
+            return
 
         if (
             request.auto_persist_turn

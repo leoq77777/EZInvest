@@ -124,6 +124,60 @@ class TestMarketDataTool:
         assert "error" in data
 
 
+class TestToolCallNormalization:
+    def test_calculator_expression_is_converted_to_pe_ratio(self):
+        from app.agent.entity_resolution import normalize_tool_call
+
+        tool, args, note = normalize_tool_call(
+            "calculate 420 / 12.5",
+            "calculator",
+            {"expression": "420/12.5"},
+        )
+
+        assert tool == "calculator"
+        assert args == {"metric": "pe_ratio", "params": {"price": 420.0, "eps": 12.5}}
+        assert note and "calculator expression" in note
+
+    def test_sentiment_texts_are_merged(self):
+        from app.agent.entity_resolution import normalize_tool_call
+
+        tool, args, note = normalize_tool_call(
+            "sentiment",
+            "sentiment_analyzer",
+            {"texts": ["Revenue grew", "Margins fell"]},
+        )
+
+        assert tool == "sentiment_analyzer"
+        assert args["text"] == "Revenue grew\nMargins fell"
+        assert note and "merged texts" in note
+
+    def test_roe_expression_is_converted_to_roe_params(self):
+        from app.agent.entity_resolution import normalize_tool_call
+
+        tool, args, note = normalize_tool_call(
+            "请计算净利润 120、股东权益 800 时的 ROE",
+            "calculator",
+            {"expression": "120 / 800 * 100"},
+        )
+
+        assert tool == "calculator"
+        assert args == {"metric": "roe", "params": {"net_income": 120.0, "equity": 800.0}}
+        assert note and "roe params" in note
+
+    def test_yoy_expression_is_converted_to_yoy_growth_params(self):
+        from app.agent.entity_resolution import normalize_tool_call
+
+        tool, args, note = normalize_tool_call(
+            "请计算收入从 100 增长到 128 的同比增速",
+            "calculator",
+            {"expression": "(128 - 100) / 100 * 100"},
+        )
+
+        assert tool == "calculator"
+        assert args == {"metric": "yoy_growth", "params": {"current": 128.0, "previous": 100.0}}
+        assert note and "yoy_growth params" in note
+
+
 # =============================================================================
 # Sentiment Tool (FinBERT model mocked)
 # =============================================================================

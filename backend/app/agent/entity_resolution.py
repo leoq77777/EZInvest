@@ -63,27 +63,72 @@ def normalize_tool_call(
     observation/thought so reports can explain that a stale ticker was corrected.
     """
     args = dict(tool_args or {})
-    if not mentions_sandisk(user_message):
-        return tool_name, args, None
+    notes: list[str] = []
 
-    note: Optional[str] = None
+    # Generic tool schema repairs. Models frequently emit natural parameter names
+    # even when LangChain tools require a stricter schema; fix cheap cases here
+    # instead of burning another reasoner iteration.
+    if tool_name == "calculator" and "expression" in args and "metric" not in args:
+        expr = str(args.get("expression", "")).strip()
+        user_lower = (user_message or "").lower()
+        ratio = re.fullmatch(r"\s*([-+]?\d+(?:\.\d+)?)\s*/\s*([-+]?\d+(?:\.\d+)?)\s*", expr)
+        percent_ratio = re.fullmatch(
+            r"\s*([-+]?\d+(?:\.\d+)?)\s*/\s*([-+]?\d+(?:\.\d+)?)\s*\*\s*100\s*",
+            expr,
+        )
+        yoy = re.fullmatch(
+            r"\s*\(?\s*([-+]?\d+(?:\.\d+)?)\s*-\s*([-+]?\d+(?:\.\d+)?)\s*\)?\s*/\s*\2\s*\*\s*100\s*",
+            expr,
+        )
+        if "roe" in user_lower and percent_ratio:
+            args = {
+                "metric": "roe",
+                "params": {
+                    "net_income": float(percent_ratio.group(1)),
+                    "equity": float(percent_ratio.group(2)),
+                },
+            }
+            notes.append("Tool guard: converted calculator expression to roe params.")
+        elif ("同比" in user_message or "yoy" in user_lower or "growth" in user_lower) and yoy:
+            args = {
+                "metric": "yoy_growth",
+                "params": {"current": float(yoy.group(1)), "previous": float(yoy.group(2))},
+            }
+            notes.append("Tool guard: converted calculator expression to yoy_growth params.")
+        elif ratio:
+            args = {
+                "metric": "pe_ratio",
+                "params": {"price": float(ratio.group(1)), "eps": float(ratio.group(2))},
+            }
+            notes.append("Tool guard: converted calculator expression to pe_ratio params.")
+
+    if tool_name in {"retriever", "web_scraper"}:
+        if not str(args.get("query", "")).strip() and args.get("url"):
+            args["query"] = str(args.get("url", "")).strip()
+            notes.append("Tool guard: moved url into query.")
+
+    if tool_name == "sentiment_analyzer":
+        if not str(args.get("text", "")).strip() and isinstance(args.get("texts"), list):
+            args["text"] = "\n".join(str(x) for x in args["texts"] if str(x).strip())
+            notes.append("Tool guard: merged texts into text.")
+
+    if not mentions_sandisk(user_message):
+        return tool_name, args, " ".join(notes) if notes else None
+
     if tool_name == "market_data":
         ticker = str(args.get("ticker", "")).upper()
         if ticker in {"", "WDC", "WESTERN DIGITAL", "SANDISK"}:
             args["ticker"] = "SNDK"
-            note = "Entity guard: SanDisk price request normalized to ticker SNDK, not WDC."
+            notes.append("Entity guard: SanDisk price request normalized to ticker SNDK, not WDC.")
 
     elif tool_name in {"retriever", "web_scraper"}:
-        # Models sometimes emit `url` instead of `query`; LangChain tool schema expects `query`.
-        if not str(args.get("query", "")).strip() and args.get("url"):
-            args["query"] = str(args.get("url", "")).strip()
         query = str(args.get("query", ""))
         suffix = _sandisk_query_suffix()
         if "SNDK" not in query.upper() or "WESTERN DIGITAL" not in query.upper():
             args["query"] = (query + suffix).strip()
-            note = "Entity guard: expanded SanDisk query with SNDK and WDC spinoff terms."
+            notes.append("Entity guard: expanded SanDisk query with SNDK and WDC spinoff terms.")
 
-    return tool_name, args, note
+    return tool_name, args, " ".join(notes) if notes else None
 
 
 # Common English words matching [A-Z]{3,5} — avoid naming sessions after them.

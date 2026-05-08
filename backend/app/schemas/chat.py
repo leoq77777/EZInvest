@@ -6,10 +6,19 @@ from typing import Optional, List
 from uuid import uuid4
 
 
+class ChatMode(str, Enum):
+    CHAT = "chat"
+    RESEARCH = "research"
+
+
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
     session_id: str = Field(default_factory=lambda: str(uuid4()))
     stream: bool = True
+    mode: ChatMode = Field(
+        default=ChatMode.RESEARCH,
+        description="chat = pure LLM response; research = tools/RAG/report agent",
+    )
     # Persistence (optional): stable browser id + server-side conversation
     profile_id: Optional[str] = Field(
         default=None,

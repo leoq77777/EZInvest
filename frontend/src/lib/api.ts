@@ -19,6 +19,8 @@ export interface StepUpdateData {
   latency_ms?: number;
 }
 
+export type ChatMode = "chat" | "research";
+
 export type StreamEventType =
   | "thought"
   | "plan"
@@ -268,6 +270,7 @@ export async function commitConversationTurn(
 }
 
 export interface StreamChatOptions {
+  mode?: ChatMode;
   profileId?: string;
   conversationId?: string | null;
   saveMessageAsMemory?: boolean;
@@ -298,6 +301,7 @@ export async function streamChat(
     message,
     session_id: sessionId,
     stream: true,
+    mode: opts?.mode ?? "research",
   };
   if (opts?.profileId) body.profile_id = opts.profileId;
   if (opts?.conversationId) body.conversation_id = opts.conversationId;

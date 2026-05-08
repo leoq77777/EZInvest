@@ -16,6 +16,42 @@ logging.basicConfig(
     level=getattr(logging, settings.log_level),
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
 )
+logger = logging.getLogger(__name__)
+
+
+async def _warmup_runtime() -> None:
+    """Load expensive local runtime pieces before the first user request."""
+    s = get_settings()
+    if not s.enable_startup_warmup:
+        return
+
+    logger.info("startup warmup: begin")
+    try:
+        from app.agent.llm import get_llm
+
+        get_llm()
+        logger.info("startup warmup: LLM client ready")
+    except Exception:
+        logger.exception("startup warmup: LLM client init failed")
+
+    try:
+        from app.services.memory_layers import build_rag_core_block
+
+        await build_rag_core_block("AAPL revenue earnings")
+        logger.info("startup warmup: RAG/embedding ready")
+    except Exception:
+        logger.exception("startup warmup: RAG/embedding failed")
+
+    if s.enable_startup_finbert_warmup:
+        try:
+            from app.agent.tools.sentiment import sentiment_tool
+
+            await sentiment_tool.ainvoke({"text": "Revenue growth was strong."})
+            logger.info("startup warmup: FinBERT ready")
+        except Exception:
+            logger.exception("startup warmup: FinBERT failed")
+
+    logger.info("startup warmup: complete")
 
 
 @asynccontextmanager
@@ -35,6 +71,7 @@ async def lifespan(app: FastAPI):
         from app.services.session_summarizer import periodic_summarize_all_profiles_loop
 
         summary_task = asyncio.create_task(periodic_summarize_all_profiles_loop())
+    await _warmup_runtime()
     try:
         yield
     finally:

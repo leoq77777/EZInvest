@@ -27,6 +27,7 @@ import {
   fetchResearchReport,
   commitConversationTurn,
   type ConversationRow,
+  type ChatMode,
 } from "@/lib/api";
 import {
   isStreamDebugEnabled,
@@ -59,6 +60,7 @@ export function ChatWindow() {
   const [input, setInput] = useState("");
   const [sessions, setSessions] = useState<ConversationRow[]>([]);
   const [usageGuideOpen, setUsageGuideOpen] = useState(false);
+  const [chatMode, setChatMode] = useState<ChatMode>("research");
   const [pendingTurnSave, setPendingTurnSave] = useState<{
     userMessage: string;
     assistantMessage: string;
@@ -329,6 +331,7 @@ export function ChatWindow() {
         }
       },
         {
+        mode: chatMode,
         profileId: effectivePid || undefined,
         conversationId,
         saveMessageAsMemory: rememberNextMessage,
@@ -357,6 +360,7 @@ export function ChatWindow() {
         conversationId &&
         effectivePid &&
         rep &&
+        chatMode === "research" &&
         !ac.signal.aborted
       ) {
         const msgs = useChatStore.getState().messages;
@@ -428,6 +432,7 @@ export function ChatWindow() {
       : persistenceReady
         ? "已同步历史"
         : "未启用数据库";
+  const isResearchMode = chatMode === "research";
 
   return (
     <div className="flex h-screen w-full max-w-[1600px] mx-auto">
@@ -489,6 +494,8 @@ export function ChatWindow() {
                 AI Investment Assistant
                 {" · "}
                 {persistenceHint}
+                {" · "}
+                {isResearchMode ? "研究模式" : "闲聊模式"}
               </p>
             </div>
           </div>
@@ -569,6 +576,39 @@ export function ChatWindow() {
 
       {/* Input */}
       <div className="px-6 py-4 border-t border-[var(--color-border)] space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
+            <button
+              type="button"
+              disabled={isStreaming}
+              onClick={() => setChatMode("chat")}
+              className={`rounded-lg px-3 py-1.5 transition-colors ${
+                chatMode === "chat"
+                  ? "bg-[var(--color-accent)] text-white"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              } disabled:opacity-50`}
+            >
+              闲聊（快速）
+            </button>
+            <button
+              type="button"
+              disabled={isStreaming}
+              onClick={() => setChatMode("research")}
+              className={`rounded-lg px-3 py-1.5 transition-colors ${
+                chatMode === "research"
+                  ? "bg-[var(--color-accent)] text-white"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              } disabled:opacity-50`}
+            >
+              研究（研报）
+            </button>
+          </div>
+          <span className="text-[var(--color-text-muted)]">
+            {isResearchMode
+              ? "会使用 RAG / 工具并生成研报"
+              : "纯 LLM 回复，不生成研报"}
+          </span>
+        </div>
         <form onSubmit={handleSubmit} className="flex gap-2 items-end">
           <textarea
             ref={inputRef}
@@ -578,7 +618,9 @@ export function ChatWindow() {
             placeholder={
               inputLocked && !isStreaming
                 ? "正在连接会话存储…"
-                : "Ask about any investment..."
+                : isResearchMode
+                  ? "Ask for research, filings, valuation, or a report..."
+                  : "Ask a quick question..."
             }
             rows={1}
             disabled={inputLocked}
@@ -609,17 +651,19 @@ export function ChatWindow() {
       </div>
       </div>
 
-      <LiveReportPanel
-        markdown={liveReportMarkdown}
-        isUpdating={isStreaming}
-        showSave={Boolean(persistenceReady && pendingTurnSave)}
-        saveBusy={saveTurnBusy}
-        onSave={
-          pendingTurnSave && persistenceReady
-            ? () => void handleCommitPendingTurn()
-            : undefined
-        }
-      />
+      {isResearchMode && (
+        <LiveReportPanel
+          markdown={liveReportMarkdown}
+          isUpdating={isStreaming}
+          showSave={Boolean(persistenceReady && pendingTurnSave)}
+          saveBusy={saveTurnBusy}
+          onSave={
+            pendingTurnSave && persistenceReady
+              ? () => void handleCommitPendingTurn()
+              : undefined
+          }
+        />
+      )}
       </div>
     </div>
   );

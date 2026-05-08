@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     debug_stream: bool = False
     # While waiting on slow RAG / agent steps, emit SSE comment lines so proxies (Next/nginx) do not close the TCP idle connection.
     sse_keepalive_interval_sec: float = 5.0
+    # Warm expensive local models/indexes during startup so the first user request
+    # does not pay the embedding / FinBERT cold-start cost.
+    enable_startup_warmup: bool = True
+    enable_startup_finbert_warmup: bool = True
+    # Bound research-mode ReAct loops. Chat mode does one LLM call and bypasses this.
+    agent_max_iterations: int = 3
     cors_origins: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
@@ -78,6 +84,8 @@ class Settings(BaseSettings):
     # Market Data
     market_data_api_key: str = ""
     market_data_provider: str = "yfinance"
+    market_data_timeout_sec: float = 4.0
+    market_data_max_retries: int = 0
 
     model_config = {"env_file": ("../.env", ".env"), "env_file_encoding": "utf-8"}
 

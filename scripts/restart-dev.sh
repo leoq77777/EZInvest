@@ -29,6 +29,14 @@ log() {
   printf '[dev-restart] %s\n' "$*"
 }
 
+sanitize_proxy_env() {
+  # Avoid leaking corporate/dev proxy vars into local dev services.
+  unset http_proxy https_proxy all_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY
+  export NO_PROXY="127.0.0.1,localhost,::1"
+  export no_proxy="$NO_PROXY"
+  log "proxy env sanitized for local dev (NO_PROXY=$NO_PROXY)"
+}
+
 # Any TCP state on the port (LISTEN, CLOSED, etc.); LISTEN-only misses stuck uvicorn reloaders.
 # lsof exits 1 when nothing matches; with pipefail that must not abort the script.
 pids_on_port() {
@@ -118,6 +126,7 @@ wait_for_http() {
 
 main() {
   log "root: $ROOT_DIR"
+  sanitize_proxy_env
   kill_port "$BACKEND_PORT"
   for p in $FRONTEND_EXTRA_PORTS; do
     [[ "$p" == "$FRONTEND_PORT" ]] || kill_port "$p"

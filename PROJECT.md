@@ -264,9 +264,3 @@ EZInvest/
 2. **QLoRA 微调**：基于财报 Q&A 数据集对 Qwen2.5-7B 进行 LoRA 微调，提升模型在金融领域的专业性
 3. **多 Agent 协作**：拆分为 Research Agent（调研）和 Analyst Agent（分析），通过消息总线协作
 4. **会话记忆**：接入 Redis 或数据库实现跨会话记忆，支持用户追问和上下文关联
-
----
-
-## 简历 / 投递一页纸
-
-投递与面试话术、**全项目**总结与中英简历 bullet 见 [PROJECT_RESUME.zh.md](./PROJECT_RESUME.zh.md)。
